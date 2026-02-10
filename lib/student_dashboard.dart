@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'attendance_screen.dart';
 import 'subject_selection_screen.dart';
+import 'enrolled_courses_screen.dart';
 
 class StudentDashboard extends StatefulWidget {
   const StudentDashboard({super.key});
@@ -903,21 +904,16 @@ class _StudentDashboardState extends State<StudentDashboard> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          _buildNavItem(Icons.dashboard_rounded, 'Dashboard', 0, subTextColor),
-          _buildNavItem(Icons.school_rounded, 'Learn', 1, subTextColor),
+          _buildNavItem(Icons.grid_view_rounded, 'Dashboard', 0, subTextColor),
+          _buildNavItem(Icons.local_library_rounded, 'Course', 1, subTextColor),
           _buildNavItem(Icons.assignment_rounded, 'Exams', 2, subTextColor),
           _buildNavItem(
-            Icons.insert_chart_outlined_rounded,
+            Icons.insert_chart_rounded,
             'Analytics',
             3,
             subTextColor,
           ),
-          _buildNavItem(
-            Icons.person_outline_rounded,
-            'Profile',
-            4,
-            subTextColor,
-          ),
+          _buildNavItem(Icons.person_rounded, 'Profile', 4, subTextColor),
         ],
       ),
     );
@@ -931,7 +927,23 @@ class _StudentDashboardState extends State<StudentDashboard> {
   ) {
     final bool isSelected = _selectedIndex == index;
     return GestureDetector(
-      onTap: () => setState(() => _selectedIndex = index),
+      onTap: () {
+        if (index == _selectedIndex) return;
+        if (index == 0) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const StudentDashboard()),
+          );
+        } else if (index == 1) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const EnrolledCoursesScreen(),
+            ),
+          );
+        }
+        // Other tabs can be added here
+      },
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [

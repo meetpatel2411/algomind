@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'manage_students_screen.dart';
+import 'manage_exams_screen.dart';
 
 class TeacherDashboard extends StatefulWidget {
   const TeacherDashboard({super.key});
@@ -610,6 +611,12 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
             MaterialPageRoute(
               builder: (context) => const ManageStudentsScreen(),
             ),
+          );
+        }
+        if (index == 3) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const ManageExamsScreen()),
           );
         }
         setState(() => _selectedIndex = index);

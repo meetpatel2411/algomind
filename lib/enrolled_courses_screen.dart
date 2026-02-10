@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'student_dashboard.dart';
 import 'course_details_screen.dart';
+import 'learning_analytics_screen.dart';
+import 'timetable_screen.dart';
 
 class EnrolledCoursesScreen extends StatefulWidget {
   const EnrolledCoursesScreen({super.key});
@@ -595,16 +597,26 @@ class _EnrolledCoursesScreenState extends State<EnrolledCoursesScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          _buildNavItem(Icons.grid_view_rounded, 'Dashboard', 0, subTextColor),
-          _buildNavItem(Icons.local_library_rounded, 'Course', 1, subTextColor),
-          _buildNavItem(Icons.assignment_rounded, 'Exams', 2, subTextColor),
+          _buildNavItem(Icons.grid_view_rounded, 'Home', 0, subTextColor),
+          _buildNavItem(Icons.schedule_rounded, 'Timetable', 2, subTextColor),
+          _buildNavItem(
+            Icons.local_library_rounded,
+            'Courses',
+            1,
+            subTextColor,
+          ),
           _buildNavItem(
             Icons.insert_chart_rounded,
             'Analytics',
             3,
             subTextColor,
           ),
-          _buildNavItem(Icons.person_rounded, 'Profile', 4, subTextColor),
+          _buildNavItem(
+            Icons.person_outline_rounded,
+            'Profile',
+            4,
+            subTextColor,
+          ),
         ],
       ),
     );
@@ -630,6 +642,18 @@ class _EnrolledCoursesScreenState extends State<EnrolledCoursesScreen> {
             context,
             MaterialPageRoute(
               builder: (context) => const EnrolledCoursesScreen(),
+            ),
+          );
+        } else if (index == 2) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const TimetableScreen()),
+          );
+        } else if (index == 3) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const LearningAnalyticsScreen(),
             ),
           );
         }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'student_dashboard.dart';
+import 'teacher_dashboard.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -297,7 +298,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const StudentDashboard(),
+                        builder: (context) => isStudent
+                            ? const StudentDashboard()
+                            : const TeacherDashboard(),
                       ),
                     );
                   },

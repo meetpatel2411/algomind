@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'teacher_dashboard.dart';
 import 'student_profile_screen.dart';
+import 'widgets/profile_image.dart';
 
 class ManageStudentsScreen extends StatefulWidget {
   const ManageStudentsScreen({super.key});
@@ -267,17 +268,11 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
         ),
         child: Row(
           children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: primaryColor.withOpacity(0.2)),
-                image: DecorationImage(
-                  image: NetworkImage(imageUrl),
-                  fit: BoxFit.cover,
-                ),
-              ),
+            ProfileImage(
+              imageUrl: imageUrl,
+              size: 48,
+              borderColor: primaryColor.withOpacity(0.2),
+              borderWidth: 1,
             ),
             const SizedBox(width: 16),
             Expanded(

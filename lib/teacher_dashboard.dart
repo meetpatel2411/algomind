@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'manage_students_screen.dart';
 import 'manage_exams_screen.dart';
+import 'teaching_schedule_screen.dart';
+import 'attendance_selection_screen.dart';
+import 'student_evaluation_screen.dart';
+import 'widgets/profile_image.dart';
 
 class TeacherDashboard extends StatefulWidget {
   const TeacherDashboard({super.key});
@@ -136,7 +140,12 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
               bottom: 0,
               left: 0,
               right: 0,
-              child: _buildBottomNav(surfaceColor, subTextColor, isDarkMode),
+              child: _buildBottomNav(
+                surfaceColor,
+                subTextColor,
+                isDarkMode,
+                borderColor,
+              ),
             ),
           ],
         ),
@@ -209,22 +218,12 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
           ),
           Stack(
             children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: primaryColor.withOpacity(0.2),
-                    width: 2,
-                  ),
-                  image: const DecorationImage(
-                    image: NetworkImage(
-                      'https://lh3.googleusercontent.com/aida-public/AB6AXuDDJ0xT_gismssEV3tDJT-5kYdGVXCrGNSCNKwmxu_icHAUrDUt8owJFEtSDe1qLPCXqxnROGnBHSIZ7GH-U6H3SMmGMkkJ1Ca6uCEO3HwTYcwMyyMIJgaAd-70rgAIsHbISjIG4SRNf8H5PQc0evW9-XY5d2A7fH_stOAZUy-RyDk09YD-JA16RkWy6use7JvQlpOkiNWqQ2cyujIfT8bjohE5T6AytBDjzLWE68a6BXk7LCzNDZd-p632NC373yt71pGpNoehdYk',
-                    ),
-                    fit: BoxFit.cover,
-                  ),
-                ),
+              ProfileImage(
+                imageUrl:
+                    'https://lh3.googleusercontent.com/aida-public/AB6AXuDDJ0xT_gismssEV3tDJT-5kYdGVXCrGNSCNKwmxu_icHAUrDUt8owJFEtSDe1qLPCXqxnROGnBHSIZ7GH-U6H3SMmGMkkJ1Ca6uCEO3HwTYcwMyyMIJgaAd-70rgAIsHbISjIG4SRNf8H5PQc0evW9-XY5d2A7fH_stOAZUy-RyDk09YD-JA16RkWy6use7JvQlpOkiNWqQ2cyujIfT8bjohE5T6AytBDjzLWE68a6BXk7LCzNDZd-p632NC373yt71pGpNoehdYk',
+                size: 48,
+                borderColor: primaryColor.withOpacity(0.2),
+                borderWidth: 2,
               ),
               Positioned(
                 bottom: -2,
@@ -396,6 +395,14 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
           false,
           surfaceColor,
           borderColor,
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const AttendanceSelectionScreen(),
+              ),
+            );
+          },
         ),
         _buildActionCard(
           'Create Exam',
@@ -417,12 +424,20 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
         ),
         _buildActionCard(
           'Timetable',
-          Icons.calendar_today_rounded,
-          surfaceColor,
-          primaryColor,
-          false,
+          Icons.schedule_rounded,
+          const Color(0xfff59e0b),
+          Colors.white,
+          true,
           surfaceColor,
           borderColor,
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const TeachingScheduleScreen(),
+              ),
+            );
+          },
         ),
         _buildActionCard(
           'Reports',
@@ -432,6 +447,14 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
           false,
           surfaceColor,
           borderColor,
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const StudentEvaluationScreen(),
+              ),
+            );
+          },
         ),
       ],
     );
@@ -566,9 +589,10 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
     Color surfaceColor,
     Color subTextColor,
     bool isDarkMode,
+    Color borderColor,
   ) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
       decoration: BoxDecoration(
         color: surfaceColor.withOpacity(0.95),
         border: Border(
@@ -578,18 +602,18 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
         ),
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _buildNavItem(Icons.grid_view_rounded, 'Dashboard', 0, subTextColor),
-          _buildNavItem(Icons.school_rounded, 'Students', 1, subTextColor),
+          _buildNavItem(Icons.dashboard_rounded, 'Dashboard', 0, subTextColor),
+          _buildNavItem(Icons.groups_rounded, 'Students', 1, subTextColor),
           _buildNavItem(
-            Icons.assignment_turned_in_rounded,
-            'Attendance',
+            Icons.calendar_month_rounded,
+            'Schedule',
             2,
             subTextColor,
           ),
-          _buildNavItem(Icons.history_edu_rounded, 'Exams', 3, subTextColor),
-          _buildNavItem(Icons.menu_book_rounded, 'Courses', 4, subTextColor),
+          _buildNavItem(Icons.assignment_rounded, 'Exams', 3, subTextColor),
+          _buildNavItem(Icons.person_rounded, 'Profile', 4, subTextColor),
         ],
       ),
     );
@@ -606,15 +630,23 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
       onTap: () {
         if (index == _selectedIndex) return;
         if (index == 1) {
-          Navigator.pushReplacement(
+          Navigator.push(
             context,
             MaterialPageRoute(
               builder: (context) => const ManageStudentsScreen(),
             ),
           );
         }
+        if (index == 2) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const TeachingScheduleScreen(),
+            ),
+          );
+        }
         if (index == 3) {
-          Navigator.pushReplacement(
+          Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => const ManageExamsScreen()),
           );

@@ -165,6 +165,29 @@ class _LessonPreviewScreenState extends State<LessonPreviewScreen>
               fit: BoxFit.cover,
               width: double.infinity,
               height: double.infinity,
+              loadingBuilder: (context, child, loadingProgress) {
+                if (loadingProgress == null) return child;
+                return Center(
+                  child: CircularProgressIndicator(
+                    value: loadingProgress.expectedTotalBytes != null
+                        ? loadingProgress.cumulativeBytesLoaded /
+                              loadingProgress.expectedTotalBytes!
+                        : null,
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                );
+              },
+              errorBuilder: (context, error, stackTrace) => Container(
+                color: Colors.grey.shade300,
+                child: Center(
+                  child: Icon(
+                    Icons.broken_image_outlined,
+                    color: Colors.grey.shade500,
+                    size: 40,
+                  ),
+                ),
+              ),
             ),
             Container(color: Colors.black.withOpacity(0.1)),
             Positioned(

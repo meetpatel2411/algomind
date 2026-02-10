@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'student_dashboard.dart';
+import 'widgets/profile_image.dart';
 import 'enrolled_courses_screen.dart';
 import 'timetable_screen.dart';
 
@@ -148,22 +149,12 @@ class _LearningAnalyticsScreenState extends State<LearningAnalyticsScreen> {
               ),
             ],
           ),
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: primaryColor.withOpacity(0.2),
-                width: 2,
-              ),
-              image: const DecorationImage(
-                image: NetworkImage(
-                  'https://lh3.googleusercontent.com/aida-public/AB6AXuA--YFA4M-DobLnR5985RrHOfxeu1gXZfntu9O4exPvieU0T_73-FymVqoxlW7dkj9wbdbGz9hQiP2rp4MGP_wTYQESqyuUie7Qa__D9OrYrmvnDlv1CiWqkbw2TQi3jn_Tf0L5fIrVgs76yiRtYiWxy97F-urPhCiBu7DluSH4P2bS9wf8j65yk0q8WsEa6BZs8vnTZKFC2YTVlukSAE2YJILo_mmCOT-rKV3aU6UOqnrbyWPw-jwpwRlRMys0eNQabQ3TfKIRKTc',
-                ),
-                fit: BoxFit.cover,
-              ),
-            ),
+          ProfileImage(
+            imageUrl:
+                'https://lh3.googleusercontent.com/aida-public/AB6AXuA--YFA4M-DobLnR5985RrHOfxeu1gXZfntu9O4exPvieU0T_73-FymVqoxlW7dkj9wbdbGz9hQiP2rp4MGP_wTYQESqyuUie7Qa__D9OrYrmvnDlv1CiWqkbw2TQi3jn_Tf0L5fIrVgs76yiRtYiWxy97F-urPhCiBu7DluSH4P2bS9wf8j65yk0q8WsEa6BZs8vnTZKFC2YTVlukSAE2YJILo_mmCOT-rKV3aU6UOqnrbyWPw-jwpwRlRMys0eNQabQ3TfKIRKTc',
+            size: 44,
+            borderColor: primaryColor.withOpacity(0.2),
+            borderWidth: 2,
           ),
         ],
       ),

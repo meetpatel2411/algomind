@@ -4,6 +4,7 @@ import 'student_dashboard.dart';
 import 'course_details_screen.dart';
 import 'learning_analytics_screen.dart';
 import 'timetable_screen.dart';
+import 'widgets/profile_image.dart';
 
 class EnrolledCoursesScreen extends StatefulWidget {
   const EnrolledCoursesScreen({super.key});
@@ -396,13 +397,7 @@ class _EnrolledCoursesScreenState extends State<EnrolledCoursesScreen> {
                   children: [
                     Row(
                       children: [
-                        CircleAvatar(
-                          radius: 12,
-                          backgroundImage: NetworkImage(instructorImg),
-                          backgroundColor: isDarkMode
-                              ? Colors.white12
-                              : Colors.black12,
-                        ),
+                        ProfileImage(imageUrl: instructorImg, size: 24),
                         const SizedBox(width: 8),
                         Text(
                           instructor,

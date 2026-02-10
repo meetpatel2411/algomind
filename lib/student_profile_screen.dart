@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'dart:math' as math;
 import 'teacher_dashboard.dart';
 import 'manage_students_screen.dart';
+import 'widgets/profile_image.dart';
 
 class StudentProfileScreen extends StatefulWidget {
   final Map<String, String> studentData;
@@ -182,24 +183,11 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
       ),
       child: Column(
         children: [
-          Container(
-            width: 96,
-            height: 96,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.white, width: 4),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-              image: DecorationImage(
-                image: NetworkImage(widget.studentData['image'] ?? ''),
-                fit: BoxFit.cover,
-              ),
-            ),
+          ProfileImage(
+            imageUrl: widget.studentData['image'] ?? '',
+            size: 96,
+            borderColor: Colors.white,
+            borderWidth: 4,
           ),
           const SizedBox(height: 16),
           Text(

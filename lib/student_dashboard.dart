@@ -5,6 +5,7 @@ import 'subject_selection_screen.dart';
 import 'enrolled_courses_screen.dart';
 import 'learning_analytics_screen.dart';
 import 'timetable_screen.dart';
+import 'widgets/profile_image.dart';
 
 class StudentDashboard extends StatefulWidget {
   const StudentDashboard({super.key});
@@ -133,22 +134,12 @@ class _StudentDashboardState extends State<StudentDashboard> {
             children: [
               Stack(
                 children: [
-                  Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: primaryColor.withOpacity(0.2),
-                        width: 2,
-                      ),
-                      image: const DecorationImage(
-                        image: NetworkImage(
-                          'https://lh3.googleusercontent.com/aida-public/AB6AXuAB7E2WERww0-T6exuILmu7Y-CcfqFiETWHCj1uha-E0zQwWGyQwfJI_E_1qSv9lu22anV2i7P82EaipOZ70VLUoduW1Y_nGP7Q94IOpnh67qO2B0Ts0xkaAjNnL5Ol4dqi61Hvp8-sBJD-9-ZiGuZlQ0qZ_8AMY2X0rAh2NRgymRgil30Px8qfvBFZ1q5SQUl9jmkccCRLwHqxPu4YoisuHlMRAM2hjxA9RR8OeoHaamGmKueMRcqqbgjpokEmG-j0AxZ8lGYx1cg',
-                        ),
-                        fit: BoxFit.cover,
-                      ),
-                    ),
+                  ProfileImage(
+                    imageUrl:
+                        'https://lh3.googleusercontent.com/aida-public/AB6AXuAB7E2WERww0-T6exuILmu7Y-CcfqFiETWHCj1uha-E0zQwWGyQwfJI_E_1qSv9lu22anV2i7P82EaipOZ70VLUoduW1Y_nGP7Q94IOpnh67qO2B0Ts0xkaAjNnL5Ol4dqi61Hvp8-sBJD-9-ZiGuZlQ0qZ_8AMY2X0rAh2NRgymRgil30Px8qfvBFZ1q5SQUl9jmkccCRLwHqxPu4YoisuHlMRAM2hjxA9RR8OeoHaamGmKueMRcqqbgjpokEmG-j0AxZ8lGYx1cg',
+                    size: 48,
+                    borderColor: primaryColor.withOpacity(0.2),
+                    borderWidth: 2,
                   ),
                   Positioned(
                     bottom: 0,
@@ -756,16 +747,16 @@ class _StudentDashboardState extends State<StudentDashboard> {
           ),
           child: Row(
             children: [
-              Container(
-                width: 100,
-                height: 100,
-                decoration: const BoxDecoration(
-                  image: DecorationImage(
-                    image: NetworkImage(
+              ClipRRect(
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(20),
+                  bottomLeft: Radius.circular(20),
+                ),
+                child: ProfileImage(
+                  imageUrl:
                       'https://lh3.googleusercontent.com/aida-public/AB6AXuAG-wWdjomEW8CiYF3kUY8yCehxc6hWrfDPjui7do51Eq_wtxzXpQtbYKtJ-grM5NR2lfKXna3bzZH4nNfSjep_l_aNMXikIJil_PuZpuQWAF6mE-6TkA2bZ5PEEHjtmPocnKz2ruP5szKoERkohgIVnkC0xDKU4O1Rvk-cyvZlPEkR-i8qJ_QyV51qXPcDrn_g5swOaeSNGK3a38Kj11gCZLMBceT2VYexAthWxggtTgkyGpx5aYpr0gipmMeemC8hQ6Hls-Wi3Yw',
-                    ),
-                    fit: BoxFit.cover,
-                  ),
+                  size: 100,
+                  backgroundColor: Colors.transparent,
                 ),
               ),
               Expanded(

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'student_dashboard.dart';
 import 'teacher_dashboard.dart';
+import 'widgets/profile_image.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -423,7 +424,7 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
           child: Opacity(
             opacity: isSelected ? 1.0 : 0.6,
-            child: CircleAvatar(backgroundImage: NetworkImage(imageUrl)),
+            child: ProfileImage(imageUrl: imageUrl, size: 40),
           ),
         ),
         const SizedBox(height: 8),

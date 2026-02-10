@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'dart:math' as math;
 import 'teacher_dashboard.dart';
 import 'manage_students_screen.dart';
+import 'widgets/profile_image.dart';
 
 class ExamResultsScreen extends StatefulWidget {
   final Map<String, dynamic> examData;
@@ -552,24 +553,23 @@ class _ExamResultsScreenState extends State<ExamResultsScreen> {
             decoration: BoxDecoration(
               color: isDarkMode ? Colors.white10 : const Color(0xfff1f5f9),
               borderRadius: BorderRadius.circular(10),
-              image: student['image'] != ''
-                  ? DecorationImage(
-                      image: NetworkImage(student['image']),
-                      fit: BoxFit.cover,
-                    )
-                  : null,
             ),
             alignment: Alignment.center,
-            child: student['image'] == ''
-                ? Text(
+            child: student['image'] != ''
+                ? ProfileImage(
+                    imageUrl: student['image'],
+                    size: 44,
+                    borderColor: Colors.transparent,
+                    borderWidth: 0,
+                  )
+                : Text(
                     student['name'].split(' ').map((e) => e[0]).join(''),
                     style: GoogleFonts.lexend(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
                       color: primaryColor,
                     ),
-                  )
-                : null,
+                  ),
           ),
           const SizedBox(width: 12),
           Expanded(

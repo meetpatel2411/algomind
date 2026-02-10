@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'teacher_dashboard.dart';
 import 'manage_students_screen.dart';
 import 'create_exam_screen.dart';
+import 'widgets/profile_image.dart';
 import 'exam_details_screen.dart';
 
 class ManageExamsScreen extends StatefulWidget {
@@ -187,22 +188,11 @@ class _ManageExamsScreenState extends State<ManageExamsScreen> {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: primaryColor.withOpacity(0.2),
-                        width: 2,
-                      ),
-                      image: const DecorationImage(
-                        image: NetworkImage(
-                          'https://lh3.googleusercontent.com/aida-public/AB6AXuB8RoccHkfm2u4VVnSS5eo8dQPDBqPv87nYeYRyxh69SLXZM734PIJYe6mYavQupcXOWTB0xN7mpkzyURhE8eFHf0LwTn59iXth6tcA5EC73nfxTuJWOQozZaQuDRCnT4evJMiIWCFQN0IxTPBzpn3IfFmHvMWjfHuSGfBBgxqs9mJ522s2udLsfth2wrIdisWAajjV0Xt9INcbiyhP4C8jTA_ovabeQJ_STvIyy68IQpGG1JQRkEiHK04kF5B3B4hxDf7QwuMfBjc',
-                        ),
-                        fit: BoxFit.cover,
-                      ),
-                    ),
+                  ProfileImage(
+                    imageUrl:
+                        'https://lh3.googleusercontent.com/aida-public/AB6AXuB8RoccHkfm2u4VVnSS5eo8dQPDBqPv87nYeYRyxh69SLXZM734PIJYe6mYavQupcXOWTB0xN7mpkzyURhE8eFHf0LwTn59iXth6tcA5EC73nfxTuJWOQozZaQuDRCnT4evJMiIWCFQN0IxTPBzpn3IfFmHvMWjfHuSGfBBgxqs9mJ522s2udLsfth2wrIdisWAajjV0Xt9INcbiyhP4C8jTA_ovabeQJ_STvIyy68IQpGG1JQRkEiHK04kF5B3B4hxDf7QwuMfBjc',
+                    borderColor: primaryColor.withOpacity(0.2),
+                    borderWidth: 2,
                   ),
                 ],
               ),

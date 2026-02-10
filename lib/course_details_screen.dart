@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'lesson_preview_screen.dart';
+import 'chapter_exam_screen.dart';
 
 class CourseDetailsScreen extends StatefulWidget {
   final String title;
@@ -268,11 +270,11 @@ class _CourseDetailsScreenState extends State<CourseDetailsScreen> {
             isExpanded: _isPracticeExpanded,
             onToggle: () =>
                 setState(() => _isPracticeExpanded = !_isPracticeExpanded),
-            content: _buildLockedContent(),
+            content: _buildPracticeContent(textColor, isDarkMode),
             surfaceColor: surfaceColor,
             borderColor: borderColor,
             iconColor: successColor,
-            isLocked: true,
+            isLocked: false,
           ),
         ],
       ),
@@ -398,71 +400,83 @@ class _CourseDetailsScreenState extends State<CourseDetailsScreen> {
     bool isCompleted = status == "completed";
     bool isCurrent = status == "current";
 
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: isCurrent ? primaryColor.withOpacity(0.05) : Colors.transparent,
-        border: Border(top: BorderSide(color: borderColor)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              color: isCompleted
-                  ? successColor.withOpacity(0.1)
-                  : (isCurrent ? primaryColor : Colors.grey.withOpacity(0.1)),
-              shape: BoxShape.circle,
+    return InkWell(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => LessonPreviewScreen(title: title),
+          ),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: isCurrent
+              ? primaryColor.withOpacity(0.05)
+              : Colors.transparent,
+          border: Border(top: BorderSide(color: borderColor)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: isCompleted
+                    ? successColor.withOpacity(0.1)
+                    : (isCurrent ? primaryColor : Colors.grey.withOpacity(0.1)),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                isCompleted
+                    ? Icons.check
+                    : (isCurrent ? Icons.play_arrow : Icons.play_arrow),
+                size: 16,
+                color: isCompleted
+                    ? successColor
+                    : (isCurrent ? Colors.white : Colors.grey),
+              ),
             ),
-            child: Icon(
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: GoogleFonts.lexend(
+                      fontSize: 14,
+                      fontWeight: isCurrent ? FontWeight.w600 : FontWeight.w500,
+                      color: isCurrent ? primaryColor : textColor,
+                    ),
+                  ),
+                  Text(
+                    meta,
+                    style: GoogleFonts.lexend(
+                      fontSize: 11,
+                      color: isCurrent
+                          ? primaryColor.withOpacity(0.6)
+                          : subTextColor,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
               isCompleted
-                  ? Icons.check
-                  : (isCurrent ? Icons.play_arrow : Icons.play_arrow),
-              size: 16,
+                  ? Icons.cloud_done
+                  : (isCurrent
+                        ? Icons.downloading
+                        : Icons.file_download_outlined),
+              size: 20,
               color: isCompleted
                   ? successColor
-                  : (isCurrent ? Colors.white : Colors.grey),
+                  : (isCurrent ? primaryColor : Colors.grey),
             ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: GoogleFonts.lexend(
-                    fontSize: 14,
-                    fontWeight: isCurrent ? FontWeight.w600 : FontWeight.w500,
-                    color: isCurrent ? primaryColor : textColor,
-                  ),
-                ),
-                Text(
-                  meta,
-                  style: GoogleFonts.lexend(
-                    fontSize: 11,
-                    color: isCurrent
-                        ? primaryColor.withOpacity(0.6)
-                        : subTextColor,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Icon(
-            isCompleted
-                ? Icons.cloud_done
-                : (isCurrent
-                      ? Icons.downloading
-                      : Icons.file_download_outlined),
-            size: 20,
-            color: isCompleted
-                ? successColor
-                : (isCurrent ? primaryColor : Colors.grey),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -556,27 +570,68 @@ class _CourseDetailsScreenState extends State<CourseDetailsScreen> {
     );
   }
 
-  Widget _buildLockedContent() {
+  Widget _buildPracticeContent(Color textColor, bool isDarkMode) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
+      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
       width: double.infinity,
-      child: Opacity(
-        opacity: 0.6,
-        child: Column(
-          children: [
-            const Icon(Icons.lock_open_rounded, size: 40, color: Colors.grey),
-            const SizedBox(height: 12),
-            Text(
-              "Complete \"Linear Equations Part 1\" to unlock the practice session.",
-              textAlign: TextAlign.center,
-              style: GoogleFonts.lexend(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: Colors.grey,
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.green.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.check_circle_outline,
+                  color: Colors.green,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  "All lessons completed. You're ready for the chapter exam!",
+                  style: GoogleFonts.lexend(
+                    fontSize: 14,
+                    color: textColor,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ChapterExamScreen(
+                      chapterTitle: "Advanced Algebra",
+                    ),
+                  ),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: successColor,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: Text(
+                "Start Chapter Exam",
+                style: GoogleFonts.lexend(fontWeight: FontWeight.bold),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

@@ -160,7 +160,7 @@ class _ExamDetailsScreenState extends State<ExamDetailsScreen> {
                 Row(
                   children: [
                     Text(
-                      widget.examData['class'] ?? 'Grade 10-A',
+                      widget.examData['class'] ?? '10-A',
                       style: GoogleFonts.lexend(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,

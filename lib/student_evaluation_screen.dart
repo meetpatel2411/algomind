@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'widgets/profile_image.dart';
+import 'widgets/teacher_bottom_navigation.dart';
 
 class StudentEvaluationScreen extends StatefulWidget {
   const StudentEvaluationScreen({super.key});
@@ -602,38 +603,49 @@ class _StudentEvaluationScreenState extends State<StudentEvaluationScreen> {
     bool isDarkMode,
   ) {
     return Container(
-      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: surfaceColor.withOpacity(0.95),
         border: Border(top: BorderSide(color: borderColor)),
       ),
-      child: ElevatedButton(
-        onPressed: () {},
-        style: ElevatedButton.styleFrom(
-          backgroundColor: primaryColor,
-          elevation: 4,
-          shadowColor: primaryColor.withOpacity(0.25),
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.file_download_rounded, color: Colors.white),
-            const SizedBox(width: 12),
-            Text(
-              'EXPORT CLASS RESULTS',
-              style: GoogleFonts.lexend(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-                letterSpacing: 1.0,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(24),
+            child: ElevatedButton(
+              onPressed: () {},
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryColor,
+                elevation: 4,
+                shadowColor: primaryColor.withOpacity(0.25),
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.file_download_rounded, color: Colors.white),
+                  const SizedBox(width: 12),
+                  Text(
+                    'EXPORT CLASS RESULTS',
+                    style: GoogleFonts.lexend(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      letterSpacing: 1.0,
+                    ),
+                  ),
+                ],
               ),
             ),
-          ],
-        ),
+          ),
+          TeacherBottomNavigation(
+            currentIndex: 1, // Highlighting Students tab
+            isDarkMode: isDarkMode,
+          ),
+        ],
       ),
     );
   }

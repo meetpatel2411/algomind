@@ -54,7 +54,7 @@ class _EnrolledCoursesScreenState extends State<EnrolledCoursesScreen> {
                           children: [
                             _buildCourseCard(
                               status: 'In Progress',
-                              title: 'Mathematics: Grade 10 Advanced',
+                              title: 'Mathematics: 10 Advanced',
                               progress: 0.65,
                               instructor: 'Prof. Sarah Jenkins',
                               instructorImg:

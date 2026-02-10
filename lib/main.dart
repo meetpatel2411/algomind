@@ -2,12 +2,14 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 // import 'firebase_options.dart'; // TODO: Uncomment when generated
 import 'login_screen.dart';
+import 'services/connectivity_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     // options: DefaultFirebaseOptions.currentPlatform, // TODO: Uncomment when generated
   );
+  ConnectivityService().initialize();
   runApp(const MyApp());
 }
 

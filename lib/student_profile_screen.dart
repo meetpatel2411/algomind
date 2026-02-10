@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:math' as math;
-import 'teacher_dashboard.dart';
-import 'manage_students_screen.dart';
 import 'widgets/profile_image.dart';
+import 'widgets/teacher_bottom_navigation.dart';
 
 class StudentProfileScreen extends StatefulWidget {
   final Map<String, String> studentData;
@@ -20,7 +19,6 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
   final Color successColor = const Color(0xff10b981);
 
   int _selectedTabIndex = 0;
-  int _selectedNavItem = 1;
 
   @override
   Widget build(BuildContext context) {
@@ -640,79 +638,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
     Color subTextColor,
     bool isDarkMode,
   ) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
-      decoration: BoxDecoration(
-        color: surfaceColor.withOpacity(0.95),
-        border: Border(
-          top: BorderSide(
-            color: isDarkMode ? Colors.white10 : const Color(0xffe2e8f0),
-          ),
-        ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          _buildNavItem(Icons.grid_view_rounded, 'Dashboard', 0, subTextColor),
-          _buildNavItem(Icons.school_rounded, 'Students', 1, subTextColor),
-          _buildNavItem(
-            Icons.assignment_turned_in_rounded,
-            'Attendance',
-            2,
-            subTextColor,
-          ),
-          _buildNavItem(Icons.history_edu_rounded, 'Exams', 3, subTextColor),
-          _buildNavItem(Icons.menu_book_rounded, 'Courses', 4, subTextColor),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildNavItem(
-    IconData icon,
-    String label,
-    int index,
-    Color subTextColor,
-  ) {
-    final bool isSelected = _selectedNavItem == index;
-    return GestureDetector(
-      onTap: () {
-        if (index == _selectedNavItem) return;
-        if (index == 0) {
-          Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(builder: (context) => const TeacherDashboard()),
-            (route) => false,
-          );
-        } else if (index == 1) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const ManageStudentsScreen(),
-            ),
-          );
-        }
-      },
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            icon,
-            color: isSelected ? primaryColor : subTextColor.withOpacity(0.6),
-            size: 24,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: GoogleFonts.lexend(
-              fontSize: 10,
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-              color: isSelected ? primaryColor : subTextColor.withOpacity(0.6),
-            ),
-          ),
-        ],
-      ),
-    );
+    return TeacherBottomNavigation(currentIndex: 1, isDarkMode: isDarkMode);
   }
 }
 

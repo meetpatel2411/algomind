@@ -9,6 +9,11 @@ class DatabaseService {
   CollectionReference get classes => _db.collection('classes');
   CollectionReference get subjects => _db.collection('subjects');
   CollectionReference get exams => _db.collection('exams');
+  CollectionReference get timetable => _db.collection('timetable');
+  CollectionReference get attendanceSessions =>
+      _db.collection('attendance_sessions');
+  CollectionReference get attendance =>
+      _db.collection('attendance'); // New flat table
 
   // --- USER METHODS ---
 
@@ -42,6 +47,48 @@ class DatabaseService {
         .snapshots();
   }
 
+  Stream<QuerySnapshot> getStudentsByClassNameAndSection(
+    String className,
+    String section,
+  ) {
+    return users
+        .where('role', isEqualTo: 'student')
+        .where('className', isEqualTo: className)
+        .where('section', isEqualTo: section)
+        .snapshots();
+  }
+
+  Stream<int> getAllStudentsCount() {
+    return users
+        .where('role', isEqualTo: 'student')
+        .snapshots()
+        .map((snapshot) => snapshot.docs.length);
+  }
+
+  // --- STUDENT CRUD ---
+
+  Future<void> addStudent(Map<String, dynamic> data) async {
+    // Generate a new ID if not provided, or use Auth UID if available (handling that in UI/Auth service)
+    // For simple management here, we might just create a Firestore doc.
+    // Ideally, we create an Auth user too, but that requires Admin SDK or Cloud Functions usually.
+    // For this prototype, we'll just add to Firestore.
+    DocumentReference ref = users.doc();
+    await ref.set({
+      ...data,
+      'uid': ref.id,
+      'role': 'student',
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Future<void> updateStudent(String uid, Map<String, dynamic> data) async {
+    await users.doc(uid).update(data);
+  }
+
+  Future<void> deleteStudent(String uid) async {
+    await users.doc(uid).delete();
+  }
+
   // --- ACADEMIC METHODS ---
 
   Stream<QuerySnapshot> getTeacherClasses(String teacherId) {
@@ -57,6 +104,49 @@ class DatabaseService {
     return subjects.where('classIds', arrayContains: classId).snapshots();
   }
 
+  // Get classes for specific date (filters by day of week)
+  Stream<QuerySnapshot> getTeacherClassesByDate(
+    String teacherId,
+    DateTime date,
+  ) {
+    final dayOfWeek = _getDayName(date);
+    return timetable
+        .where('teacherId', isEqualTo: teacherId)
+        .where('dayOfWeek', isEqualTo: dayOfWeek)
+        .snapshots();
+  }
+
+  // Get schedule for a student (class) for specific date
+  Stream<QuerySnapshot> getStudentSchedule(String classId, DateTime date) {
+    final dayOfWeek = _getDayName(date);
+    return timetable
+        .where('classId', isEqualTo: classId)
+        .where('dayOfWeek', isEqualTo: dayOfWeek)
+        .snapshots();
+  }
+
+  String _getDayName(DateTime date) {
+    const days = [
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday',
+    ];
+    return days[date.weekday - 1];
+  }
+
+  // Get attendance history for a teacher
+  Stream<QuerySnapshot> getAttendanceHistory(String teacherId) {
+    return attendanceSessions
+        .where('teacherId', isEqualTo: teacherId)
+        // .orderBy('date', descending: true) // Temporarily removed to bypass index requirement
+        // .limit(50)
+        .snapshots();
+  }
+
   // --- ATTENDANCE METHODS ---
 
   Future<void> markAttendance(
@@ -68,27 +158,46 @@ class DatabaseService {
   ) async {
     WriteBatch batch = _db.batch();
 
-    // 1. Create Session Document
-    DocumentReference sessionRef = classes
-        .doc(classId)
-        .collection('attendance_sessions')
-        .doc();
+    // 1. Create Session Document (Meta-data for History)
+    DocumentReference sessionRef = attendanceSessions.doc();
     batch.set(sessionRef, {
       'classId': classId,
+      'className': records.isNotEmpty ? records[0]['className'] : '',
+      'section': records.isNotEmpty ? records[0]['section'] : '',
       'subjectId': subjectId,
+      'subjectName': records.isNotEmpty ? records[0]['subjectName'] : '',
       'teacherId': teacherId,
       'date': Timestamp.fromDate(date),
       'createdAt': FieldValue.serverTimestamp(),
     });
 
-    // 2. Add Records
+    // 2. Add Flat Records to 'attendance' table
     for (var record in records) {
+      // Individual record for management/search
+      DocumentReference flatRef = attendance.doc();
+      batch.set(flatRef, {
+        'studentId': record['studentId'],
+        'studentName': record['studentName'],
+        'classId': classId,
+        'className': record['className'],
+        'section': record['section'],
+        'subjectId': subjectId,
+        'subjectName': record['subjectName'],
+        'teacherId': teacherId,
+        'date': Timestamp.fromDate(date),
+        'status': record['status'], // 'Present', 'Absent', 'Late'
+        'remarks': record['remarks'] ?? '',
+        'sessionId': sessionRef.id,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+
+      // Also keep nested record for direct session view if needed
       DocumentReference recordRef = sessionRef
           .collection('records')
           .doc(record['studentId']);
       batch.set(recordRef, {
         'studentId': record['studentId'],
-        'status': record['status'], // 'Present', 'Absent', 'Late'
+        'status': record['status'],
         'remarks': record['remarks'] ?? '',
       });
     }
@@ -96,11 +205,26 @@ class DatabaseService {
     await batch.commit();
   }
 
-  Stream<QuerySnapshot> getAttendanceHistory(String classId) {
-    return classes
-        .doc(classId)
-        .collection('attendance_sessions')
+  // Management: Get attendance for a specific student
+  Stream<QuerySnapshot> getStudentAttendanceHistory(String studentId) {
+    return attendance
+        .where('studentId', isEqualTo: studentId)
         .orderBy('date', descending: true)
+        .snapshots();
+  }
+
+  // Management: Get attendance for a class on a specific date
+  Stream<QuerySnapshot> getAttendanceByClassAndDate(
+    String classId,
+    DateTime date,
+  ) {
+    DateTime startOfDay = DateTime(date.year, date.month, date.day);
+    DateTime endOfDay = startOfDay.add(const Duration(days: 1));
+
+    return attendance
+        .where('classId', isEqualTo: classId)
+        .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
+        .where('date', isLessThan: Timestamp.fromDate(endOfDay))
         .snapshots();
   }
 
@@ -141,5 +265,125 @@ class DatabaseService {
       ...resultData,
       'submittedAt': FieldValue.serverTimestamp(),
     });
+  }
+
+  // --- TEACHER STATS & UTILS ---
+
+  // Get total students across all classes taught by teacher
+  Stream<int> getTeacherStudentCount(String teacherId) {
+    return classes.where('teacherId', isEqualTo: teacherId).snapshots().map((
+      snapshot,
+    ) {
+      int total = 0;
+      for (var doc in snapshot.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        total += (data['studentCount'] as num? ?? 0).toInt();
+      }
+      return total;
+    });
+  }
+
+  // Get active exams count
+  Stream<int> getActiveExamsCount(String teacherId) {
+    // For now, returning count of all exams.
+    // In a real app with 'creatorId' or 'teacherId' on exams, filter by that.
+    return exams.snapshots().map((snapshot) => snapshot.docs.length);
+  }
+
+  // Check if teacher has any classes (for auto-seed check)
+  Future<bool> checkTeacherHasClasses(String teacherId) async {
+    final snapshot = await classes
+        .where('teacherId', isEqualTo: teacherId)
+        .limit(1)
+        .get();
+    return snapshot.docs.isNotEmpty;
+  }
+
+  // Fix: Recalculate student counts for accuracy
+  Future<void> recalculateStudentCounts(String teacherId) async {
+    final classSnapshot = await classes
+        .where('teacherId', isEqualTo: teacherId)
+        .get();
+    WriteBatch batch = _db.batch();
+
+    for (var classDoc in classSnapshot.docs) {
+      final studentSnapshot = await users
+          .where('classId', isEqualTo: classDoc.id)
+          .where('role', isEqualTo: 'student')
+          .count()
+          .get();
+
+      batch.update(classDoc.reference, {'studentCount': studentSnapshot.count});
+    }
+
+    await batch.commit();
+  }
+
+  // --- CLASS MANAGEMENT METHODS ---
+
+  /// Create a new class/lecture
+  Future<String> createClass({
+    required String teacherId,
+    required String name,
+    required String subject,
+    required String section,
+    required String room,
+    required String startTime,
+    required String endTime,
+    required String dayOfWeek,
+    required int studentCount,
+  }) async {
+    try {
+      final docRef = await classes.add({
+        'teacherId': teacherId,
+        'name': name,
+        'subject': subject,
+        'section': section,
+        'room': room,
+        'startTime': startTime,
+        'endTime': endTime,
+        'dayOfWeek': dayOfWeek,
+        'studentCount': studentCount,
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      return docRef.id;
+    } catch (e) {
+      if (kDebugMode) print('Error creating class: $e');
+      rethrow;
+    }
+  }
+
+  /// Update an existing class
+  Future<void> updateClass(String classId, Map<String, dynamic> data) async {
+    try {
+      await classes.doc(classId).update({
+        ...data,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      if (kDebugMode) print('Error updating class: $e');
+      rethrow;
+    }
+  }
+
+  /// Delete a class
+  Future<void> deleteClass(String classId) async {
+    try {
+      await classes.doc(classId).delete();
+    } catch (e) {
+      if (kDebugMode) print('Error deleting class: $e');
+      rethrow;
+    }
+  }
+
+  /// Get a specific class by ID
+  Future<DocumentSnapshot> getClassById(String classId) async {
+    try {
+      return await classes.doc(classId).get();
+    } catch (e) {
+      if (kDebugMode) print('Error getting class: $e');
+      rethrow;
+    }
   }
 }

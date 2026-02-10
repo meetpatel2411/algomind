@@ -1,10 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'services/database_service.dart';
-import 'teacher_dashboard.dart';
-import 'student_profile_screen.dart';
 import 'widgets/profile_image.dart';
+import 'student_profile_screen.dart';
+import 'widgets/teacher_bottom_navigation.dart';
+// Duplicate imports removed
 
 class ManageStudentsScreen extends StatefulWidget {
   const ManageStudentsScreen({super.key});
@@ -19,7 +21,9 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
   final Color backgroundDark = const Color(0xff101722);
   final Color successColor = const Color(0xff10b981);
 
-  int _selectedIndex = 1;
+  // int _selectedIndex = 1; // Removed unused variable
+  String? _selectedClassId;
+  String _searchQuery = ''; // New state for search
 
   @override
   Widget build(BuildContext context) {
@@ -50,11 +54,21 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
                     child: Column(
                       children: [
                         _buildSearchBar(surfaceColor, subTextColor, isDarkMode),
+                        const SizedBox(height: 16),
+                        _buildClassFilter(
+                          surfaceColor,
+                          textColor,
+                          subTextColor,
+                        ),
                         const SizedBox(height: 24),
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 24),
                           child: StreamBuilder<QuerySnapshot>(
-                            stream: DatabaseService().getStudents(),
+                            stream: _selectedClassId == null
+                                ? DatabaseService().getStudents()
+                                : DatabaseService().getStudentsByClass(
+                                    _selectedClassId!,
+                                  ),
                             builder: (context, snapshot) {
                               if (snapshot.hasError)
                                 return Text('Error: ${snapshot.error}');
@@ -65,7 +79,27 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
                                 );
                               }
 
-                              final students = snapshot.data?.docs ?? [];
+                              final allStudents = snapshot.data?.docs ?? [];
+
+                              // Client-side filtering for search & class
+                              final students = allStudents.where((doc) {
+                                final data = doc.data() as Map<String, dynamic>;
+                                final fullName = (data['fullName'] ?? '')
+                                    .toString()
+                                    .toLowerCase();
+                                final className =
+                                    (data['className'] ?? data['classId'] ?? '')
+                                        .toString()
+                                        .toLowerCase();
+                                final section = (data['section'] ?? '')
+                                    .toString()
+                                    .toLowerCase();
+                                final query = _searchQuery.toLowerCase();
+
+                                return fullName.contains(query) ||
+                                    className.contains(query) ||
+                                    section.contains(query);
+                              }).toList();
 
                               if (students.isEmpty) {
                                 return Center(
@@ -90,7 +124,7 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
                                           as Map<String, dynamic>;
                                   return _buildStudentCard(
                                     data['fullName'] ?? 'Student Name',
-                                    '${data['classId'] ?? 'Grade'} • ${data['section'] ?? ''}',
+                                    'Class ${data['className'] ?? data['classId'] ?? '-'} • Section ${data['section']?.toString().toUpperCase() ?? '-'}',
                                     data['imageUrl'] ??
                                         'https://lh3.googleusercontent.com/aida-public/AB6AXuCbLqF1z_brevwevj8gLnDNbnF8bSW65w67IYIGtfVOU5EC0EKTxTMx0O1iIaQMNyA-bxBSvfRocMdwKcWzz2vPTaRDFtzQXkDiLN34i-qqeKeb0gBv2zU8YBZmFhxrWOTLwBdmWi4Qy7v8AIztiRYbLh9zSjVklru0GkP6jplzU3KQ0ufowmEjhD4tFz4GA8YH7hpdtpJszEamC6h_9-7tO9cS-XPIG6tuapKyaMZSnDruaZywL1FTlsy19krzH-i7pSQexpak_po',
                                     surfaceColor,
@@ -98,6 +132,12 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
                                     textColor,
                                     subTextColor,
                                     isDarkMode,
+                                    onEdit: () => _showStudentDialog(
+                                      student: data,
+                                      uid: students[index].id,
+                                    ),
+                                    onDelete: () =>
+                                        _confirmDelete(students[index].id),
                                   );
                                 },
                               );
@@ -114,7 +154,7 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
               bottom: 100,
               right: 24,
               child: FloatingActionButton(
-                onPressed: () {},
+                onPressed: () => _showStudentDialog(),
                 backgroundColor: primaryColor,
                 child: const Icon(
                   Icons.add_rounded,
@@ -135,57 +175,198 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
     );
   }
 
+  // --- CRUD LOGIC ---
+
+  Future<void> _showStudentDialog({
+    Map<String, dynamic>? student,
+    String? uid,
+  }) async {
+    final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+    final nameController = TextEditingController(
+      text: student?['fullName'] ?? '',
+    );
+    final emailController = TextEditingController(
+      text: student?['email'] ?? '',
+    );
+    final classController = TextEditingController(
+      text: student?['classId'] ?? '',
+    );
+    final sectionController = TextEditingController(
+      text: student?['section'] ?? '',
+    );
+
+    await showDialog(
+      context: context,
+      barrierDismissible: false, // Prevent closing by tapping outside
+      builder: (context) => AlertDialog(
+        title: Text(
+          student == null ? 'Add Student' : 'Edit Student',
+          style: GoogleFonts.lexend(fontWeight: FontWeight.bold),
+        ),
+        content: SingleChildScrollView(
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: nameController,
+                  decoration: const InputDecoration(labelText: 'Full Name'),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Name is required';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: emailController,
+                  decoration: const InputDecoration(labelText: 'Email'),
+                  keyboardType: TextInputType.emailAddress,
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Email is required';
+                    }
+                    final emailRegex = RegExp(
+                      r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                    );
+                    if (!emailRegex.hasMatch(value)) {
+                      return 'Enter a valid email address';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: classController,
+                  decoration: const InputDecoration(
+                    labelText: 'Class (Numeric only)',
+                    hintText: 'e.g. 10',
+                  ),
+                  keyboardType: TextInputType.number,
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Class is required';
+                    }
+                    if (int.tryParse(value) == null) {
+                      return 'Class must be a number';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: sectionController,
+                  decoration: const InputDecoration(
+                    labelText: 'Section',
+                    hintText: 'e.g. A',
+                  ),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Section is required';
+                    }
+                    return null;
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (_formKey.currentState!.validate()) {
+                final data = {
+                  'fullName': nameController.text.trim(),
+                  'email': emailController.text.trim(),
+                  'classId': classController.text.trim(),
+                  'section': sectionController.text.trim(),
+                };
+
+                try {
+                  if (student == null) {
+                    await DatabaseService().addStudent(data);
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Student Added')),
+                      );
+                    }
+                  } else {
+                    await DatabaseService().updateStudent(uid!, data);
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Student Updated')),
+                      );
+                    }
+                  }
+                  if (mounted) Navigator.pop(context);
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(SnackBar(content: Text('Error: $e')));
+                  }
+                }
+              }
+            },
+            child: Text(student == null ? 'Add' : 'Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _confirmDelete(String uid) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Student?'),
+        content: const Text('This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      try {
+        await DatabaseService().deleteStudent(uid);
+        if (mounted)
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Student Deleted')));
+      } catch (e) {
+        if (mounted)
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
+    }
+  }
+
   Widget _buildHeader(bool isDarkMode, Color subTextColor, Color textColor) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(24, 12, 24, 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    width: 8,
-                    height: 8,
-                    decoration: const BoxDecoration(
-                      color: Color(0xff10b981),
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Synced Offline',
-                    style: GoogleFonts.lexend(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: subTextColor,
-                    ),
-                  ),
-                ],
-              ),
-              Text(
-                '10:45 AM',
-                style: GoogleFonts.lexend(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  color: subTextColor,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'Manage Students',
-            style: GoogleFonts.lexend(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: textColor,
-            ),
-          ),
-        ],
+      padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+      child: Text(
+        'Manage Students',
+        style: GoogleFonts.lexend(
+          fontSize: 24,
+          fontWeight: FontWeight.bold,
+          color: textColor,
+        ),
       ),
     );
   }
@@ -211,8 +392,13 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
         ),
         child: TextField(
           style: GoogleFonts.lexend(fontSize: 14),
+          onChanged: (value) {
+            setState(() {
+              _searchQuery = value;
+            });
+          },
           decoration: InputDecoration(
-            hintText: 'Search by name or grade...',
+            hintText: 'Search by name, class or section...',
             hintStyle: GoogleFonts.lexend(color: subTextColor.withOpacity(0.6)),
             prefixIcon: Icon(
               Icons.search_rounded,
@@ -226,6 +412,77 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
     );
   }
 
+  Widget _buildClassFilter(
+    Color surfaceColor,
+    Color textColor,
+    Color subTextColor,
+  ) {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return const SizedBox.shrink();
+
+    return StreamBuilder<QuerySnapshot>(
+      stream: DatabaseService().getTeacherClasses(uid),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) return const SizedBox.shrink();
+
+        final classes = snapshot.data!.docs;
+        // If no classes, don't show filter (or show empty state handled elsewhere)
+        if (classes.isEmpty) return const SizedBox.shrink();
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            decoration: BoxDecoration(
+              color: surfaceColor,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: textColor.withOpacity(0.1)),
+            ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: _selectedClassId,
+                hint: Text(
+                  'Filter by Class',
+                  style: GoogleFonts.lexend(color: subTextColor),
+                ),
+                isExpanded: true,
+                icon: Icon(Icons.filter_list_rounded, color: primaryColor),
+                items: [
+                  DropdownMenuItem<String>(
+                    value: null,
+                    child: Text(
+                      'All Students',
+                      style: GoogleFonts.lexend(
+                        color: textColor,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                  ...classes.map((doc) {
+                    final data = doc.data() as Map<String, dynamic>;
+                    return DropdownMenuItem<String>(
+                      value: doc.id, // Using QueryDocumentSnapshot id
+                      child: Text(
+                        '${data['name']} (${data['section'] ?? ''})',
+                        style: GoogleFonts.lexend(color: textColor),
+                      ),
+                    );
+                  }),
+                ],
+                onChanged: (value) {
+                  setState(() {
+                    _selectedClassId = value;
+                  });
+                },
+                dropdownColor: surfaceColor,
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildStudentCard(
     String name,
     String details,
@@ -234,8 +491,10 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
     Color borderColor,
     Color textColor,
     Color subTextColor,
-    bool isDarkMode,
-  ) {
+    bool isDarkMode, {
+    VoidCallback? onEdit,
+    VoidCallback? onDelete,
+  }) {
     return GestureDetector(
       onTap: () {
         Navigator.push(
@@ -300,13 +559,13 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
             Row(
               children: [
                 IconButton(
-                  onPressed: () {},
+                  onPressed: onEdit,
                   icon: const Icon(Icons.edit_rounded, size: 20),
                   color: subTextColor.withOpacity(0.6),
                   splashRadius: 20,
                 ),
                 IconButton(
-                  onPressed: () {},
+                  onPressed: onDelete,
                   icon: const Icon(Icons.delete_outline_rounded, size: 20),
                   color: Colors.redAccent.withOpacity(0.6),
                   splashRadius: 20,
@@ -324,70 +583,6 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
     Color subTextColor,
     bool isDarkMode,
   ) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
-      decoration: BoxDecoration(
-        color: surfaceColor.withOpacity(0.95),
-        border: Border(
-          top: BorderSide(
-            color: isDarkMode ? Colors.white10 : const Color(0xffe2e8f0),
-          ),
-        ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          _buildNavItem(Icons.grid_view_rounded, 'Dashboard', 0, subTextColor),
-          _buildNavItem(Icons.school_rounded, 'Students', 1, subTextColor),
-          _buildNavItem(
-            Icons.assignment_turned_in_rounded,
-            'Attendance',
-            2,
-            subTextColor,
-          ),
-          _buildNavItem(Icons.history_edu_rounded, 'Exams', 3, subTextColor),
-          _buildNavItem(Icons.menu_book_rounded, 'Courses', 4, subTextColor),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildNavItem(
-    IconData icon,
-    String label,
-    int index,
-    Color subTextColor,
-  ) {
-    final bool isSelected = _selectedIndex == index;
-    return GestureDetector(
-      onTap: () {
-        if (index == _selectedIndex) return;
-        if (index == 0) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const TeacherDashboard()),
-          );
-        }
-      },
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            icon,
-            color: isSelected ? primaryColor : subTextColor.withOpacity(0.6),
-            size: 24,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: GoogleFonts.lexend(
-              fontSize: 10,
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-              color: isSelected ? primaryColor : subTextColor.withOpacity(0.6),
-            ),
-          ),
-        ],
-      ),
-    );
+    return TeacherBottomNavigation(currentIndex: 1, isDarkMode: isDarkMode);
   }
 }

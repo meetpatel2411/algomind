@@ -1,5 +1,11 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
+import 'services/database_service.dart';
+import 'widgets/teacher_bottom_navigation.dart';
+import 'mark_attendance_screen.dart';
 
 class AttendanceScreen extends StatefulWidget {
   const AttendanceScreen({super.key});
@@ -8,7 +14,8 @@ class AttendanceScreen extends StatefulWidget {
   State<AttendanceScreen> createState() => _AttendanceScreenState();
 }
 
-class _AttendanceScreenState extends State<AttendanceScreen> {
+class _AttendanceScreenState extends State<AttendanceScreen>
+    with SingleTickerProviderStateMixin {
   final Color primaryColor = const Color(0xff0f68e6);
   final Color backgroundLight = const Color(0xfff6f7f8);
   final Color backgroundDark = const Color(0xff101722);
@@ -16,7 +23,37 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   final Color dangerColor = const Color(0xffef4444);
   final Color warningColor = const Color(0xfff59e0b);
 
-  int _selectedIndex = 3; // Analytics/Attendance is active
+  DateTime _selectedDate = DateTime.now();
+  final DatabaseService _db = DatabaseService();
+  late TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _selectDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime(2023),
+      lastDate: DateTime(2030),
+    );
+    if (picked != null && picked != _selectedDate) {
+      setState(() {
+        _selectedDate = picked;
+      });
+    }
+  }
+
+  // int _selectedIndex = 3; // Removed unused variable
 
   @override
   Widget build(BuildContext context) {
@@ -36,61 +73,45 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     return Scaffold(
       backgroundColor: bgColor,
       body: SafeArea(
-        child: Stack(
+        child: Column(
           children: [
-            SingleChildScrollView(
-              padding: const EdgeInsets.only(bottom: 120),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            _buildHeader(textColor, subTextColor, surfaceColor, isDarkMode),
+            TabBar(
+              controller: _tabController,
+              labelColor: primaryColor,
+              unselectedLabelColor: subTextColor,
+              indicatorColor: primaryColor,
+              labelStyle: GoogleFonts.lexend(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+              ),
+              tabs: const [
+                Tab(text: 'Mark Attendance'),
+                Tab(text: 'History'),
+              ],
+            ),
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
                 children: [
-                  _buildHeader(
+                  _buildMarkAttendanceTab(
+                    isDarkMode,
                     textColor,
                     subTextColor,
                     surfaceColor,
-                    isDarkMode,
+                    borderColor,
                   ),
-                  const SizedBox(height: 16),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: Column(
-                      children: [
-                        _buildAttendanceSummary(
-                          surfaceColor,
-                          textColor,
-                          subTextColor,
-                          borderColor,
-                          isDarkMode,
-                        ),
-                        const SizedBox(height: 16),
-                        _buildCalendarCard(
-                          surfaceColor,
-                          textColor,
-                          subTextColor,
-                          borderColor,
-                          isDarkMode,
-                        ),
-                        const SizedBox(height: 16),
-                        _buildStatsGrid(
-                          surfaceColor,
-                          textColor,
-                          subTextColor,
-                          borderColor,
-                          isDarkMode,
-                        ),
-                        const SizedBox(height: 16),
-                        _buildOfflineSyncCard(isDarkMode, subTextColor),
-                      ],
-                    ),
+                  _buildHistoryTab(
+                    isDarkMode,
+                    textColor,
+                    subTextColor,
+                    surfaceColor,
+                    borderColor,
                   ),
                 ],
               ),
             ),
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: _buildBottomNav(surfaceColor, subTextColor, isDarkMode),
-            ),
+            _buildBottomNav(surfaceColor, subTextColor, isDarkMode),
           ],
         ),
       ),
@@ -110,23 +131,30 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         children: [
           Row(
             children: [
+              // Back button
               GestureDetector(
-                onTap: () => Navigator.pop(context),
+                onTap: () {
+                  if (Navigator.canPop(context)) {
+                    Navigator.pop(context);
+                  }
+                },
                 child: Container(
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
                     color: surfaceColor,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: isDarkMode
+                          ? const Color(0xff334155)
+                          : const Color(0xffe2e8f0),
+                    ),
                   ),
-                  child: Icon(Icons.chevron_left_rounded, color: textColor),
+                  child: Icon(
+                    Icons.arrow_back_ios_new_rounded,
+                    size: 18,
+                    color: textColor,
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
@@ -140,28 +168,37 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
               ),
             ],
           ),
-          Row(
-            children: [
-              Icon(Icons.cloud_done_rounded, size: 14, color: subTextColor),
-              const SizedBox(width: 4),
-              Text(
-                'Synced',
-                style: GoogleFonts.lexend(fontSize: 12, color: subTextColor),
+          // Profile icon instead of synced indicator
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: primaryColor.withOpacity(0.1),
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: primaryColor.withOpacity(0.2),
+                width: 2,
               ),
-            ],
+            ),
+            child: Icon(Icons.person_rounded, color: primaryColor, size: 20),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildAttendanceSummary(
-    Color surfaceColor,
-    Color textColor,
-    Color subTextColor,
-    Color borderColor,
-    bool isDarkMode,
-  ) {
+  Widget _buildAttendanceSummary(bool isDarkMode) {
+    // Recalculate colors locally since they aren't passed
+    final Color surfaceColor = isDarkMode
+        ? const Color(0xff1e293b)
+        : Colors.white;
+    final Color textColor = isDarkMode ? Colors.white : const Color(0xff1e293b);
+    final Color subTextColor = isDarkMode
+        ? const Color(0xff94a3b8)
+        : const Color(0xff64748b);
+    final Color borderColor = isDarkMode
+        ? const Color(0xff334155)
+        : const Color(0xfff1f5f9);
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -258,392 +295,398 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     );
   }
 
-  Widget _buildCalendarCard(
-    Color surfaceColor,
+  Widget _buildDatePicker(
     Color textColor,
     Color subTextColor,
-    Color borderColor,
-    bool isDarkMode,
-  ) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: surfaceColor,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: borderColor),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'October 2023',
-                style: GoogleFonts.lexend(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: textColor,
-                ),
-              ),
-              Row(
-                children: [
-                  IconButton(
-                    onPressed: () {},
-                    icon: Icon(Icons.chevron_left_rounded, color: subTextColor),
-                  ),
-                  IconButton(
-                    onPressed: () {},
-                    icon: Icon(
-                      Icons.chevron_right_rounded,
-                      color: subTextColor,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          _buildCalendarGrid(textColor, subTextColor, isDarkMode),
-          const SizedBox(height: 32),
-          const Divider(height: 1),
-          const SizedBox(height: 24),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildLegend(successColor, 'Present'),
-              _buildLegend(dangerColor, 'Absent'),
-              _buildLegend(
-                isDarkMode ? Colors.white12 : const Color(0xffe2e8f0),
-                'Holiday',
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCalendarGrid(
-    Color textColor,
-    Color subTextColor,
-    bool isDarkMode,
-  ) {
-    final List<String> weekdays = ['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU'];
-    // Mock data for Oct 2023: Starts on Sunday (but design shows empty slots)
-    // Actually HTML shows 5 empty slots, then day 1.
-    final List<Widget> days = [];
-
-    for (var day in weekdays) {
-      days.add(
-        Center(
-          child: Text(
-            day,
-            style: GoogleFonts.lexend(
-              fontSize: 11,
-              fontWeight: FontWeight.bold,
-              color: subTextColor.withOpacity(0.5),
-              letterSpacing: 1,
-            ),
-          ),
-        ),
-      );
-    }
-
-    // Empty slots
-    for (int i = 0; i < 5; i++) {
-      days.add(const SizedBox(height: 48));
-    }
-
-    // Days 1-22
-    for (int i = 1; i <= 22; i++) {
-      Color? dotColor;
-      bool isHoliday =
-          i == 4 || i == 5 || i == 11 || i == 12 || i == 18 || i == 19;
-      bool isAbsent = i == 3 || i == 16;
-      bool isPresent = !isHoliday && !isAbsent && i <= 20;
-      bool isToday = i == 20;
-
-      if (isPresent) dotColor = successColor;
-      if (isAbsent) dotColor = dangerColor;
-
-      days.add(
-        Container(
-          margin: const EdgeInsets.symmetric(vertical: 4),
-          decoration: isToday
-              ? BoxDecoration(
-                  color: primaryColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(10),
-                )
-              : null,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                i.toString(),
-                style: GoogleFonts.lexend(
-                  fontSize: 14,
-                  fontWeight: isToday ? FontWeight.bold : FontWeight.w500,
-                  color: isHoliday
-                      ? subTextColor.withOpacity(0.3)
-                      : (isToday ? primaryColor : textColor),
-                ),
-              ),
-              const SizedBox(height: 4),
-              if (dotColor != null)
-                Container(
-                  width: 6,
-                  height: 6,
-                  decoration: BoxDecoration(
-                    color: dotColor,
-                    shape: BoxShape.circle,
-                  ),
-                )
-              else
-                const SizedBox(height: 6),
-            ],
-          ),
-        ),
-      );
-    }
-
-    return GridView.count(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: 7,
-      mainAxisSpacing: 8,
-      crossAxisSpacing: 8,
-      children: days,
-    );
-  }
-
-  Widget _buildLegend(Color color, String label) {
-    return Row(
-      children: [
-        Container(
-          width: 10,
-          height: 10,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        ),
-        const SizedBox(width: 8),
-        Text(
-          label.toUpperCase(),
-          style: GoogleFonts.lexend(
-            fontSize: 11,
-            fontWeight: FontWeight.bold,
-            color: const Color(0xff94a3b8),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStatsGrid(
-    Color surfaceColor,
-    Color textColor,
-    Color subTextColor,
-    Color borderColor,
-    bool isDarkMode,
-  ) {
-    return GridView.count(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: 3,
-      crossAxisSpacing: 12,
-      childAspectRatio: 1.2,
-      children: [
-        _buildStatItem(
-          'Total Days',
-          '22',
-          subTextColor,
-          textColor,
-          surfaceColor,
-          borderColor,
-        ),
-        _buildStatItem(
-          'Present',
-          '20',
-          successColor,
-          successColor,
-          surfaceColor,
-          borderColor,
-        ),
-        _buildStatItem(
-          'Absent',
-          '2',
-          dangerColor,
-          dangerColor,
-          surfaceColor,
-          borderColor,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStatItem(
-    String label,
-    String value,
-    Color labelColor,
-    Color valueColor,
     Color surfaceColor,
     Color borderColor,
   ) {
-    return Container(
-      decoration: BoxDecoration(
-        color: surfaceColor,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: borderColor),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            label.toUpperCase(),
-            style: GoogleFonts.lexend(
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
-              color: labelColor.withOpacity(0.8),
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: GoogleFonts.lexend(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: valueColor,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildOfflineSyncCard(bool isDarkMode, Color subTextColor) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isDarkMode ? const Color(0x1a94a3b8) : const Color(0xfff1f5f9),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: isDarkMode ? Colors.white10 : Colors.black.withOpacity(0.05),
-          style: BorderStyle.solid,
+    return GestureDetector(
+      onTap: () => _selectDate(context),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        decoration: BoxDecoration(
+          color: surfaceColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: borderColor),
         ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: isDarkMode ? const Color(0xff334155) : Colors.white,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(
-              Icons.offline_bolt_rounded,
-              color: Colors.blueGrey.withOpacity(0.5),
-              size: 20,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
               children: [
+                Icon(Icons.calendar_month_rounded, color: primaryColor),
+                const SizedBox(width: 12),
                 Text(
-                  'Offline Sync Active',
+                  '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
                   style: GoogleFonts.lexend(
-                    fontSize: 12,
+                    fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: isDarkMode
-                        ? Colors.white70
-                        : const Color(0xff334155),
-                  ),
-                ),
-                Text(
-                  'Viewing cached data for October. Changes will sync when online.',
-                  style: GoogleFonts.lexend(
-                    fontSize: 10,
-                    color: isDarkMode ? Colors.white38 : Colors.grey,
+                    color: textColor,
                   ),
                 ),
               ],
             ),
-          ),
-        ],
+            Icon(Icons.arrow_drop_down_rounded, color: subTextColor),
+          ],
+        ),
       ),
     );
   }
+
+  Widget _buildClassesList(
+    Color surfaceColor,
+    Color textColor,
+    Color subTextColor,
+    Color borderColor,
+    bool isDarkMode,
+  ) {
+    // For now, fetching all classes as mock since we don't have real schedule-date mapping in DB yet
+    // In a real app, we'd query classes scheduled for this day
+    return StreamBuilder(
+      stream: _db.getTeacherClasses(
+        'teacher1',
+      ), // Assuming auth not fully hooked up with ID yet
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        var classes = snapshot.data!.docs;
+
+        if (classes.isEmpty) {
+          return Center(
+            child: Text(
+              'No classes scheduled for today',
+              style: GoogleFonts.lexend(color: subTextColor),
+            ),
+          );
+        }
+
+        return ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: classes.length,
+          itemBuilder: (context, index) {
+            var data = classes[index].data() as Map<String, dynamic>;
+            String className = data['name'] ?? 'Class';
+            String subject = data['subject'] ?? 'Subject';
+            String time = '09:00 AM - 10:00 AM'; // Mock time
+
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => MarkAttendanceScreen(
+                        subjectId: data['subjectId'] ?? 'unknown_subject',
+                        teacherId: FirebaseAuth.instance.currentUser?.uid ?? '',
+                        classId: data['classId'] ?? classes[index].id,
+                        className: className,
+                        subjectName: subject,
+                        date: _selectedDate,
+                      ),
+                    ),
+                  );
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: surfaceColor,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: borderColor),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            time,
+                            style: GoogleFonts.lexend(
+                              fontSize: 12,
+                              color: subTextColor,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            subject,
+                            style: GoogleFonts.lexend(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: textColor,
+                            ),
+                          ),
+                          Text(
+                            className,
+                            style: GoogleFonts.lexend(
+                              fontSize: 14,
+                              color: primaryColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: primaryColor.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          'Mark',
+                          style: GoogleFonts.lexend(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: primaryColor,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // Removed _buildCalendarCard, _buildStatsGrid, _buildOfflineSyncCard helper methods
+  // and corresponding logic as we are focusing on daily attendance marking view
 
   Widget _buildBottomNav(
     Color surfaceColor,
     Color subTextColor,
     bool isDarkMode,
   ) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
-      decoration: BoxDecoration(
-        color: surfaceColor.withOpacity(0.9),
-        border: Border(
-          top: BorderSide(
-            color: isDarkMode ? Colors.white10 : const Color(0xffe2e8f0),
-          ),
+    return TeacherBottomNavigation(currentIndex: 2, isDarkMode: isDarkMode);
+  }
+
+  // Removed _buildNavItem as it is now in TeacherBottomNavigation
+
+  // Mark Attendance Tab Content
+  Widget _buildMarkAttendanceTab(
+    bool isDarkMode,
+    Color textColor,
+    Color subTextColor,
+    Color surfaceColor,
+    Color borderColor,
+  ) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.only(bottom: 20),
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          children: [
+            _buildAttendanceSummary(isDarkMode),
+            const SizedBox(height: 16),
+            _buildDatePicker(
+              textColor,
+              subTextColor,
+              surfaceColor,
+              borderColor,
+            ),
+            const SizedBox(height: 16),
+            _buildClassesList(
+              surfaceColor,
+              textColor,
+              subTextColor,
+              borderColor,
+              isDarkMode,
+            ),
+          ],
         ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          _buildNavItem(Icons.dashboard_rounded, 'Dashboard', 0, subTextColor),
-          _buildNavItem(Icons.school_rounded, 'Learn', 1, subTextColor),
-          _buildNavItem(Icons.assignment_rounded, 'Exams', 2, subTextColor),
-          _buildNavItem(
-            Icons.insert_chart_outlined_rounded,
-            'Analytics',
-            3,
-            subTextColor,
-          ),
-          _buildNavItem(
-            Icons.person_outline_rounded,
-            'Profile',
-            4,
-            subTextColor,
-          ),
-        ],
       ),
     );
   }
 
-  Widget _buildNavItem(
-    IconData icon,
-    String label,
-    int index,
+  // History Tab Content
+  Widget _buildHistoryTab(
+    bool isDarkMode,
+    Color textColor,
     Color subTextColor,
+    Color surfaceColor,
+    Color borderColor,
   ) {
-    final bool isSelected = _selectedIndex == index;
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(
-          icon,
-          color: isSelected ? primaryColor : subTextColor.withOpacity(0.6),
-          size: 24,
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      return Center(
+        child: Text(
+          'Please login to view history',
+          style: GoogleFonts.lexend(color: subTextColor),
         ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: GoogleFonts.lexend(
-            fontSize: 10,
-            fontWeight: FontWeight.bold,
-            color: isSelected ? primaryColor : subTextColor.withOpacity(0.6),
-          ),
-        ),
-      ],
+      );
+    }
+
+    return StreamBuilder<QuerySnapshot>(
+      stream: _db.getAttendanceHistory(user.uid),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.error_outline, size: 48, color: dangerColor),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Error loading history',
+                    style: GoogleFonts.lexend(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: textColor,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    snapshot.error.toString(),
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.lexend(
+                      fontSize: 12,
+                      color: subTextColor,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Center(child: CircularProgressIndicator(color: primaryColor));
+        }
+
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.history,
+                  size: 64,
+                  color: subTextColor.withOpacity(0.5),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'No attendance history',
+                  style: GoogleFonts.lexend(fontSize: 16, color: subTextColor),
+                ),
+              ],
+            ),
+          );
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(24),
+          itemCount: snapshot.data!.docs.length,
+          itemBuilder: (context, index) {
+            final session = snapshot.data!.docs[index];
+            final data = session.data() as Map<String, dynamic>;
+            final date = (data['date'] as Timestamp).toDate();
+            final classId = data['classId'] ?? '';
+
+            return FutureBuilder<DocumentSnapshot>(
+              future: _db.classes.doc(classId).get(),
+              builder: (context, classSnapshot) {
+                if (!classSnapshot.hasData) return const SizedBox.shrink();
+
+                final classData =
+                    classSnapshot.data!.data() as Map<String, dynamic>?;
+                final className = classData?['name'] ?? 'Unknown Class';
+                final subjectName = classData?['subject'] ?? 'Unknown Subject';
+
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: surfaceColor,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: borderColor),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  className,
+                                  style: GoogleFonts.lexend(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: textColor,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  subjectName,
+                                  style: GoogleFonts.lexend(
+                                    fontSize: 14,
+                                    color: subTextColor,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: primaryColor.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              DateFormat('MMM d, yyyy').format(date),
+                              style: GoogleFonts.lexend(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: primaryColor,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.access_time,
+                            size: 16,
+                            color: subTextColor,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            DateFormat('h:mm a').format(date),
+                            style: GoogleFonts.lexend(
+                              fontSize: 12,
+                              color: subTextColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              },
+            );
+          },
+        );
+      },
     );
   }
 }

@@ -347,8 +347,7 @@ class _AttendanceSelectionScreenState extends State<AttendanceSelectionScreen> {
                   status: 'Upcoming', // Default status for now
                   room: data['room'] ?? 'Online',
                   subject: data['name'] ?? 'Class',
-                  info:
-                      '${data['section'] ?? ''} • ${data['studentCount'] ?? 0} Students',
+                  info: data['section'] ?? '',
                   time: data['time'] ?? '09:00 AM',
                   surfaceColor: surfaceColor,
                   borderColor: borderColor,
@@ -507,9 +506,14 @@ class _AttendanceSelectionScreenState extends State<AttendanceSelectionScreen> {
                             context,
                             MaterialPageRoute(
                               builder: (context) => MarkAttendanceScreen(
+                                subjectId: 'subject_id_placeholder',
+                                teacherId:
+                                    FirebaseAuth.instance.currentUser?.uid ??
+                                    '',
                                 classId: classId ?? 'class_id_placeholder',
+                                className: info,
                                 subjectName: subject,
-                                room: room,
+                                date: DateTime.now(),
                               ),
                             ),
                           );
@@ -582,8 +586,14 @@ class _AttendanceSelectionScreenState extends State<AttendanceSelectionScreen> {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) =>
-                                    const AttendanceSummaryScreen(),
+                                builder: (context) => AttendanceSummaryScreen(
+                                  className: '10 A', // Placeholder
+                                  subject: 'Mathematics', // Placeholder
+                                  date: 'Today', // Placeholder
+                                  presentCount: 40,
+                                  absentCount: 5,
+                                  totalCount: 45,
+                                ),
                               ),
                             );
                           },

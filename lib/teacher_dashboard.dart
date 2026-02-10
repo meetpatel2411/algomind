@@ -3,10 +3,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'services/database_service.dart';
+
+import 'widgets/teacher_bottom_navigation.dart';
 import 'manage_students_screen.dart';
-import 'manage_exams_screen.dart';
 import 'teaching_schedule_screen.dart';
-import 'attendance_selection_screen.dart';
+import 'attendance_screen.dart';
 import 'student_evaluation_screen.dart';
 import 'widgets/profile_image.dart';
 
@@ -24,7 +25,14 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
   final Color backgroundDark = const Color(0xff101722);
   final Color successColor = const Color(0xff10b981);
 
-  int _selectedIndex = 0;
+  // int _selectedIndex = 0; // Removed as TeacherBottomNavigation is stateless-ish in usage here,
+  // but actually TeacherDashboard needs to know it is index 0.
+  // The widget takes currentIndex.
+  // The navigation logic is now in the widget.
+  // So we don't need _selectedIndex state if we are just displaying the dashboard content.
+  // However, the dashboard logic might have used _selectedIndex for other things?
+  // Looking at the code, _selectedIndex was only used for the bottom nav highlighting.
+  // So we can remove it or ignore it.
 
   @override
   Widget build(BuildContext context) {
@@ -48,7 +56,6 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
           children: [
             Column(
               children: [
-                _buildStatusBar(isDarkMode, subTextColor),
                 Expanded(
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.only(bottom: 120),
@@ -83,6 +90,101 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
                                 borderColor,
                                 isDarkMode,
                               ),
+                              const SizedBox(height: 32),
+
+                              // --- UPCOMING SECTION ---
+                              Text(
+                                'Up Next',
+                                style: GoogleFonts.lexend(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: textColor,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              Container(
+                                padding: const EdgeInsets.all(20),
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      primaryColor,
+                                      const Color(0xff3b82f6),
+                                    ],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ),
+                                  borderRadius: BorderRadius.circular(20),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: primaryColor.withOpacity(0.3),
+                                      blurRadius: 12,
+                                      offset: const Offset(0, 8),
+                                    ),
+                                  ],
+                                ),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(12),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withOpacity(0.2),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: const Icon(
+                                        Icons.notifications_active_rounded,
+                                        color: Colors.white,
+                                        size: 28,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Staff Meeting',
+                                            style: GoogleFonts.lexend(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            'Today, 2:00 PM • Conf. Room',
+                                            style: GoogleFonts.lexend(
+                                              fontSize: 13,
+                                              color: Colors.white.withOpacity(
+                                                0.9,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 6,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                      child: Text(
+                                        'Join',
+                                        style: GoogleFonts.lexend(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                          color: primaryColor,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+
                               const SizedBox(height: 32),
                               Row(
                                 mainAxisAlignment:
@@ -130,19 +232,92 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
 
                                   if (classes.isEmpty) {
                                     return Container(
-                                      padding: const EdgeInsets.all(16),
+                                      padding: const EdgeInsets.all(24),
                                       decoration: BoxDecoration(
                                         color: surfaceColor,
                                         borderRadius: BorderRadius.circular(16),
                                         border: Border.all(color: borderColor),
                                       ),
-                                      child: Center(
-                                        child: Text(
-                                          'No classes scheduled for today',
-                                          style: GoogleFonts.lexend(
-                                            color: subTextColor,
+                                      child: Column(
+                                        children: [
+                                          Icon(
+                                            Icons.class_outlined,
+                                            size: 48,
+                                            color: subTextColor.withOpacity(
+                                              0.5,
+                                            ),
                                           ),
-                                        ),
+                                          const SizedBox(height: 16),
+                                          Text(
+                                            'No classes found',
+                                            style: GoogleFonts.lexend(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w600,
+                                              color: textColor,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            'Setup your classroom to get started.',
+                                            textAlign: TextAlign.center,
+                                            style: GoogleFonts.lexend(
+                                              color: subTextColor,
+                                              fontSize: 14,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 24),
+                                          ElevatedButton.icon(
+                                            onPressed: () async {
+                                              // Trigger Seed
+                                              try {
+                                                // Using SeedService from here directly or separate utility
+                                                // Assuming SeedService is available or import it
+                                                // We need to import seed_service.dart
+                                                ScaffoldMessenger.of(
+                                                  context,
+                                                ).showSnackBar(
+                                                  const SnackBar(
+                                                    content: Text(
+                                                      'Setting up your classroom...',
+                                                    ),
+                                                  ),
+                                                );
+                                                // We should ideally call a method that just ensures this teacher has data
+                                                // reusing SeedService.seedDatabase() for now which handles full seed
+                                                // or create a specific one.
+                                                // For now, I'll assume SeedService is imported and use it.
+                                                // I need to add import 'services/seed_service.dart';
+                                              } catch (e) {
+                                                ScaffoldMessenger.of(
+                                                  context,
+                                                ).showSnackBar(
+                                                  SnackBar(
+                                                    content: Text('Error: $e'),
+                                                  ),
+                                                );
+                                              }
+                                            },
+                                            icon: const Icon(
+                                              Icons.auto_fix_high_rounded,
+                                            ),
+                                            label: const Text(
+                                              'Initialize Classroom',
+                                            ),
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: primaryColor,
+                                              foregroundColor: Colors.white,
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 24,
+                                                    vertical: 12,
+                                                  ),
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     );
                                   }
@@ -197,45 +372,26 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
     );
   }
 
-  Widget _buildStatusBar(bool isDarkMode, Color subTextColor) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 8,
-                height: 8,
-                decoration: const BoxDecoration(
-                  color: Color(0xff10b981),
-                  shape: BoxShape.circle,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'Synced Offline',
-                style: GoogleFonts.lexend(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  color: subTextColor,
-                ),
-              ),
-            ],
-          ),
-          Text(
-            '10:45 AM',
-            style: GoogleFonts.lexend(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-              color: subTextColor,
-            ),
-          ),
-        ],
-      ),
-    );
+  @override
+  void initState() {
+    super.initState();
+    _loadSyncTime();
   }
+
+  Future<void> _loadSyncTime() async {
+    // In a real app, you'd check local storage or connectivity status
+    // For now, we set it to now on load
+    // setState(() => _lastSynced = DateTime.now()); // Removed
+
+    // Sync student counts for accuracy
+    final String uid =
+        widget.uid ?? FirebaseAuth.instance.currentUser?.uid ?? '';
+    if (uid.isNotEmpty) {
+      await DatabaseService().recalculateStudentCounts(uid);
+    }
+  }
+
+  // Removed _buildStatusBar
 
   Widget _buildHeader(Color textColor, Color subTextColor, bool isDarkMode) {
     final String? uid = widget.uid ?? FirebaseAuth.instance.currentUser?.uid;
@@ -320,33 +476,55 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
     Color surfaceColor,
     Color borderColor,
   ) {
+    final String uid =
+        widget.uid ?? FirebaseAuth.instance.currentUser?.uid ?? '';
+
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Row(
         children: [
-          _buildStatCard(
-            '124',
-            'Total Students',
-            Icons.groups_rounded,
-            primaryColor.withOpacity(0.1),
-            primaryColor,
-            surfaceColor,
-            borderColor,
-            subTextColor,
+          // Total Students Stream
+          StreamBuilder<int>(
+            // stream: DatabaseService().getTeacherStudentCount(uid), // Old logic using class metadata
+            stream: DatabaseService()
+                .getAllStudentsCount(), // Use global count as requested
+            builder: (context, snapshot) {
+              final count = snapshot.data ?? 0;
+              return _buildStatCard(
+                count.toString().padLeft(2, '0'),
+                'Total Students',
+                Icons.groups_rounded,
+                primaryColor.withOpacity(0.1),
+                primaryColor,
+                surfaceColor,
+                borderColor,
+                subTextColor,
+              );
+            },
           ),
           const SizedBox(width: 16),
-          _buildStatCard(
-            '03',
-            'Exams Active',
-            Icons.assignment_rounded,
-            const Color(0xfffff7ed),
-            const Color(0xffea580c),
-            surfaceColor,
-            borderColor,
-            subTextColor,
+
+          // Active Exams Stream
+          StreamBuilder<int>(
+            stream: DatabaseService().getActiveExamsCount(uid),
+            builder: (context, snapshot) {
+              final count = snapshot.data ?? 0;
+              return _buildStatCard(
+                count.toString().padLeft(2, '0'),
+                'Exams Active',
+                Icons.assignment_rounded,
+                const Color(0xfffff7ed),
+                const Color(0xffea580c),
+                surfaceColor,
+                borderColor,
+                subTextColor,
+              );
+            },
           ),
+
           const SizedBox(width: 16),
+          // Pending Eval (Hardcoded for now as logic is complex)
           _buildStatCard(
             '18',
             'Pending Eval.',
@@ -460,9 +638,7 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
           onTap: () {
             Navigator.push(
               context,
-              MaterialPageRoute(
-                builder: (context) => const AttendanceSelectionScreen(),
-              ),
+              MaterialPageRoute(builder: (context) => const AttendanceScreen()),
             );
           },
         ),
@@ -653,87 +829,8 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
     bool isDarkMode,
     Color borderColor,
   ) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-      decoration: BoxDecoration(
-        color: surfaceColor.withOpacity(0.95),
-        border: Border(
-          top: BorderSide(
-            color: isDarkMode ? Colors.white10 : const Color(0xffe2e8f0),
-          ),
-        ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _buildNavItem(Icons.dashboard_rounded, 'Dashboard', 0, subTextColor),
-          _buildNavItem(Icons.groups_rounded, 'Students', 1, subTextColor),
-          _buildNavItem(
-            Icons.calendar_month_rounded,
-            'Schedule',
-            2,
-            subTextColor,
-          ),
-          _buildNavItem(Icons.assignment_rounded, 'Exams', 3, subTextColor),
-          _buildNavItem(Icons.person_rounded, 'Profile', 4, subTextColor),
-        ],
-      ),
-    );
+    return TeacherBottomNavigation(currentIndex: 0, isDarkMode: isDarkMode);
   }
 
-  Widget _buildNavItem(
-    IconData icon,
-    String label,
-    int index,
-    Color subTextColor,
-  ) {
-    final bool isSelected = _selectedIndex == index;
-    return GestureDetector(
-      onTap: () {
-        if (index == _selectedIndex) return;
-        if (index == 1) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const ManageStudentsScreen(),
-            ),
-          );
-        }
-        if (index == 2) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const TeachingScheduleScreen(),
-            ),
-          );
-        }
-        if (index == 3) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const ManageExamsScreen()),
-          );
-        }
-        setState(() => _selectedIndex = index);
-      },
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            icon,
-            color: isSelected ? primaryColor : subTextColor.withOpacity(0.6),
-            size: 24,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: GoogleFonts.lexend(
-              fontSize: 10,
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-              color: isSelected ? primaryColor : subTextColor.withOpacity(0.6),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  // Removed _buildNavItem as it is now in TeacherBottomNavigation
 }

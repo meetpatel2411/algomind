@@ -3,13 +3,30 @@ import 'package:google_fonts/google_fonts.dart';
 import 'dart:math' as math;
 
 class AttendanceSummaryScreen extends StatelessWidget {
-  const AttendanceSummaryScreen({super.key});
+  final String className;
+  final String subject;
+  final String date;
+  final int presentCount;
+  final int absentCount;
+  final int totalCount;
+
+  const AttendanceSummaryScreen({
+    super.key,
+    required this.className,
+    required this.subject,
+    required this.date,
+    required this.presentCount,
+    required this.absentCount,
+    required this.totalCount,
+  });
 
   final Color primaryColor = const Color(0xff0f68e6);
   final Color backgroundLight = const Color(0xfff6f7f8);
   final Color backgroundDark = const Color(0xff101722);
   final Color successColor = const Color(0xff22c55e);
   final Color dangerColor = const Color(0xffef4444);
+
+  double get percentage => totalCount > 0 ? presentCount / totalCount : 0.0;
 
   @override
   Widget build(BuildContext context) {
@@ -156,7 +173,7 @@ class AttendanceSummaryScreen extends StatelessWidget {
           CustomPaint(
             size: const Size(220, 220),
             painter: _AttendancePainter(
-              percentage: 0.92,
+              percentage: percentage,
               primaryColor: primaryColor,
               trackColor: textColor.withOpacity(0.05),
             ),
@@ -165,7 +182,7 @@ class AttendanceSummaryScreen extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                '92%',
+                '${(percentage * 100).toInt()}%',
                 style: GoogleFonts.lexend(
                   fontSize: 48,
                   fontWeight: FontWeight.bold,
@@ -217,7 +234,7 @@ class AttendanceSummaryScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Class 10-A',
+                    'Class $className',
                     style: GoogleFonts.lexend(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -225,7 +242,7 @@ class AttendanceSummaryScreen extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    'Mathematics • Period 2',
+                    subject,
                     style: GoogleFonts.lexend(
                       fontSize: 14,
                       color: subTextColor,
@@ -245,7 +262,7 @@ class AttendanceSummaryScreen extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    '10:24 AM',
+                    date,
                     style: GoogleFonts.lexend(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
@@ -269,7 +286,7 @@ class AttendanceSummaryScreen extends StatelessWidget {
                   child: Column(
                     children: [
                       Text(
-                        '46',
+                        presentCount.toString(),
                         style: GoogleFonts.lexend(
                           fontSize: 30,
                           fontWeight: FontWeight.bold,
@@ -300,7 +317,7 @@ class AttendanceSummaryScreen extends StatelessWidget {
                   child: Column(
                     children: [
                       Text(
-                        '4',
+                        absentCount.toString(),
                         style: GoogleFonts.lexend(
                           fontSize: 30,
                           fontWeight: FontWeight.bold,
@@ -337,7 +354,7 @@ class AttendanceSummaryScreen extends StatelessWidget {
         ),
         const SizedBox(width: 8),
         Text(
-          '50 Students',
+          '$totalCount Students',
           style: GoogleFonts.lexend(
             fontSize: 14,
             fontWeight: FontWeight.bold,

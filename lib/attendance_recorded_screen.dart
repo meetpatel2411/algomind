@@ -192,7 +192,7 @@ class AttendanceRecordedScreen extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Grade 10 - Mathematics',
+            '10 - Mathematics',
             style: GoogleFonts.lexend(
               fontSize: 18,
               fontWeight: FontWeight.bold,

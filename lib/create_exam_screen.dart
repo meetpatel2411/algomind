@@ -22,7 +22,7 @@ class _CreateExamScreenState extends State<CreateExamScreen> {
   final TextEditingController _marksController = TextEditingController();
 
   // Selections
-  String _selectedClass = 'Grade 10-A';
+  String _selectedClass = '10-A';
   String _selectedSubject = 'Mathematics';
 
   bool _isCreating = false;
@@ -218,7 +218,7 @@ class _CreateExamScreenState extends State<CreateExamScreen> {
             Expanded(
               child: _buildDropdownField(
                 'Class',
-                ['Grade 10-A', 'Grade 10-B', 'Grade 11-C'],
+                ['10-A', '10-B', '11-C'],
                 surfaceColor,
                 borderColor,
                 subTextColor,

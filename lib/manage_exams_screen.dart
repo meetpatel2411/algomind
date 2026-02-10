@@ -1,5 +1,7 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'services/database_service.dart';
 import 'teacher_dashboard.dart';
 import 'manage_students_screen.dart';
 import 'create_exam_screen.dart';
@@ -27,33 +29,6 @@ class _ManageExamsScreenState extends State<ManageExamsScreen> {
     'Upcoming',
     'Ongoing',
     'Completed',
-  ];
-
-  final List<Map<String, dynamic>> _exams = [
-    {
-      'title': 'Mid-term Algebra I',
-      'class': '10-A Math',
-      'status': 'Ongoing',
-      'date': 'Oct 12, 2023',
-      'duration': '90 Mins',
-      'isOffline': true,
-    },
-    {
-      'title': 'English Essay Finals',
-      'class': '12-B Literature',
-      'status': 'Upcoming',
-      'date': 'Oct 15, 2023',
-      'duration': '45 Mins',
-      'isOffline': true,
-    },
-    {
-      'title': 'Physics Quiz 2',
-      'class': '11-C Science',
-      'status': 'Completed',
-      'date': 'Oct 08, 2023',
-      'duration': '60 Mins',
-      'isOffline': true,
-    },
   ];
 
   @override
@@ -88,21 +63,49 @@ class _ManageExamsScreenState extends State<ManageExamsScreen> {
                         const SizedBox(height: 20),
                         _buildFilterPills(subTextColor),
                         const SizedBox(height: 24),
-                        ListView.separated(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: _exams.length,
-                          separatorBuilder: (context, index) =>
-                              const SizedBox(height: 16),
-                          itemBuilder: (context, index) {
-                            final exam = _exams[index];
-                            return _buildExamCard(
-                              exam,
-                              surfaceColor,
-                              borderColor,
-                              textColor,
-                              subTextColor,
-                              isDarkMode,
+                        StreamBuilder<QuerySnapshot>(
+                          stream: DatabaseService().getExams(),
+                          builder: (context, snapshot) {
+                            if (snapshot.hasError)
+                              return Text('Error: ${snapshot.error}');
+                            if (snapshot.connectionState ==
+                                ConnectionState.waiting) {
+                              return const Center(
+                                child: CircularProgressIndicator(),
+                              );
+                            }
+
+                            final exams = snapshot.data?.docs ?? [];
+
+                            if (exams.isEmpty) {
+                              return Center(
+                                child: Text(
+                                  'No exams found.',
+                                  style: GoogleFonts.lexend(
+                                    color: subTextColor,
+                                  ),
+                                ),
+                              );
+                            }
+
+                            return ListView.separated(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              itemCount: exams.length,
+                              separatorBuilder: (context, index) =>
+                                  const SizedBox(height: 16),
+                              itemBuilder: (context, index) {
+                                final data =
+                                    exams[index].data() as Map<String, dynamic>;
+                                return _buildExamCard(
+                                  data,
+                                  surfaceColor,
+                                  borderColor,
+                                  textColor,
+                                  subTextColor,
+                                  isDarkMode,
+                                );
+                              },
                             );
                           },
                         ),

@@ -1,5 +1,7 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'services/database_service.dart';
 import 'teacher_dashboard.dart';
 import 'student_profile_screen.dart';
 import 'widgets/profile_image.dart';
@@ -18,39 +20,6 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
   final Color successColor = const Color(0xff10b981);
 
   int _selectedIndex = 1;
-
-  final List<Map<String, String>> _students = [
-    {
-      'name': 'Alexander Wright',
-      'details': 'Grade 12 • Science A',
-      'image':
-          'https://lh3.googleusercontent.com/aida-public/AB6AXuCbLqF1z_brevwevj8gLnDNbnF8bSW65w67IYIGtfVOU5EC0EKTxTMx0O1iIaQMNyA-bxBSvfRocMdwKcWzz2vPTaRDFtzQXkDiLN34i-qqeKeb0gBv2zU8YBZmFhxrWOTLwBdmWi4Qy7v8AIztiRYbLh9zSjVklru0GkP6jplzU3KQ0ufowmEjhD4tFz4GA8YH7hpdtpJszEamC6h_9-7tO9cS-XPIG6tuapKyaMZSnDruaZywL1FTlsy19krzH-i7pSQexpak_po',
-    },
-    {
-      'name': 'Eleanor Martinez',
-      'details': 'Grade 11 • Mathematics',
-      'image':
-          'https://lh3.googleusercontent.com/aida-public/AB6AXuCM27HNiRxENobNZkXyJxoY4KF2atbCpHIoOp4cVxjeF_4jj2bTjIw9skm1rj16RmaILv0x5CS9OPA3u2l368mjQpwf3KXZDTxQk92ITKrxPWq80ClyNwrDgLuYRcT4lMYH_fHek9Fn5IYkkjQiuNuds0lxaZx16TrS2UVWvfC7r9b2qwgRP5p1YwTC2ySfgdyc2zzEqnTUmu--UJ0FaXU7DY3v0wclLE0-bjz-zCuHAMoNzzDsQMpNZN2Fz7Ht-L8TIElTamEHNdU',
-    },
-    {
-      'name': 'Julian Henderson',
-      'details': 'Grade 12 • Science B',
-      'image':
-          'https://lh3.googleusercontent.com/aida-public/AB6AXuB6SPqHr3bk8D0YVsiSJuhrwIiY1wDl8ermEQJ7Fzk0nuZuS6JBPjVA0tAjk7Outtgmvi-WDhx-rQAL-A5HmuKnhk-z-BNdOeIWMo22-gRQORx9w0q4sQm6El8HZs3fdXsPQkqej1XjjRAfxQ9k4tH8xhDhCEOWRybw0MVSLN0vZouDTa1Za1I8wSMHE_lA8gcB1vOD8-er2adIpY0Q_nFUlIh2xQ_IaihyguNpeHuwNpgkD_Q9iH4PDnghFWWcLQufbTYm9C44oJg',
-    },
-    {
-      'name': 'Maya Thompson',
-      'details': 'Grade 10 • Literature',
-      'image':
-          'https://lh3.googleusercontent.com/aida-public/AB6AXuA5kWxQBmaobyRBVwlPsNsuNv-K24TQbMJ-zrkitxFTlCPhTb1pF_odE3niFakFvWGvU8wCL_9zm1lDFXd5KczpCGR4kQFw8xdsHCTDLNlIRfCopAT4bB58UPjvQaUAce1MWZZCXW15N6-u7rvbGKZt3UtA2UvVpQkRzArKBtu0LixOWRmUjG2PqakmbZpMEhrOhFKlAyVfKwnzYimqcOjvATCAEMnok63NpmFPfE8fYaWJCXdRtKc7LrmhzPOpH4hbib3NWM0QDvA',
-    },
-    {
-      'name': 'Owen Brooks',
-      'details': 'Grade 11 • History',
-      'image':
-          'https://lh3.googleusercontent.com/aida-public/AB6AXuAIPiUNBqKRZ11QvPDr2d8JTTmrW5xZY_uYbuYHIiUWebYq14iJa_oWz29AZQiBB6UQRo9mywFZvV-OiDd-8YeLMWm7l0muEbEVGj_Ai96MOOC_Dg64i-x6QqGtYk9msrVDmfyQ9hlSidwTOYPDejh4Swt1LWZzXFc4TJO9AHV79XYJi7awJbtYWtrpxkRCRlDSSxlspWdrRbJNLDcchJLRvm0cKI1RfChNvWkl9L5kAiBdVRbfUtonU9_qVvhgEJgMMeZ32DZikqc',
-    },
-  ];
 
   @override
   Widget build(BuildContext context) {
@@ -84,23 +53,53 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
                         const SizedBox(height: 24),
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 24),
-                          child: ListView.separated(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            itemCount: _students.length,
-                            separatorBuilder: (context, index) =>
-                                const SizedBox(height: 16),
-                            itemBuilder: (context, index) {
-                              final student = _students[index];
-                              return _buildStudentCard(
-                                student['name']!,
-                                student['details']!,
-                                student['image']!,
-                                surfaceColor,
-                                borderColor,
-                                textColor,
-                                subTextColor,
-                                isDarkMode,
+                          child: StreamBuilder<QuerySnapshot>(
+                            stream: DatabaseService().getStudents(),
+                            builder: (context, snapshot) {
+                              if (snapshot.hasError)
+                                return Text('Error: ${snapshot.error}');
+                              if (snapshot.connectionState ==
+                                  ConnectionState.waiting) {
+                                return const Center(
+                                  child: CircularProgressIndicator(),
+                                );
+                              }
+
+                              final students = snapshot.data?.docs ?? [];
+
+                              if (students.isEmpty) {
+                                return Center(
+                                  child: Text(
+                                    'No students found.',
+                                    style: GoogleFonts.lexend(
+                                      color: subTextColor,
+                                    ),
+                                  ),
+                                );
+                              }
+
+                              return ListView.separated(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                itemCount: students.length,
+                                separatorBuilder: (context, index) =>
+                                    const SizedBox(height: 16),
+                                itemBuilder: (context, index) {
+                                  final data =
+                                      students[index].data()
+                                          as Map<String, dynamic>;
+                                  return _buildStudentCard(
+                                    data['fullName'] ?? 'Student Name',
+                                    '${data['classId'] ?? 'Grade'} • ${data['section'] ?? ''}',
+                                    data['imageUrl'] ??
+                                        'https://lh3.googleusercontent.com/aida-public/AB6AXuCbLqF1z_brevwevj8gLnDNbnF8bSW65w67IYIGtfVOU5EC0EKTxTMx0O1iIaQMNyA-bxBSvfRocMdwKcWzz2vPTaRDFtzQXkDiLN34i-qqeKeb0gBv2zU8YBZmFhxrWOTLwBdmWi4Qy7v8AIztiRYbLh9zSjVklru0GkP6jplzU3KQ0ufowmEjhD4tFz4GA8YH7hpdtpJszEamC6h_9-7tO9cS-XPIG6tuapKyaMZSnDruaZywL1FTlsy19krzH-i7pSQexpak_po',
+                                    surfaceColor,
+                                    borderColor,
+                                    textColor,
+                                    subTextColor,
+                                    isDarkMode,
+                                  );
+                                },
                               );
                             },
                           ),

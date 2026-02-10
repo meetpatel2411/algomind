@@ -1,5 +1,8 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'services/database_service.dart';
 import 'manage_students_screen.dart';
 import 'manage_exams_screen.dart';
 import 'teaching_schedule_screen.dart';
@@ -8,7 +11,8 @@ import 'student_evaluation_screen.dart';
 import 'widgets/profile_image.dart';
 
 class TeacherDashboard extends StatefulWidget {
-  const TeacherDashboard({super.key});
+  final String? uid;
+  const TeacherDashboard({super.key, this.uid});
 
   @override
   State<TeacherDashboard> createState() => _TeacherDashboardState();
@@ -106,26 +110,66 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
                                 ],
                               ),
                               const SizedBox(height: 16),
-                              _buildTodayClassItem(
-                                'Advanced Physics',
-                                'Grade 12 • 11:30 AM',
-                                'ROOM 402',
-                                Icons.science_rounded,
-                                surfaceColor,
-                                borderColor,
-                                textColor,
-                                subTextColor,
-                              ),
-                              const SizedBox(height: 12),
-                              _buildTodayClassItem(
-                                'Calculus II',
-                                'Grade 11 • 01:15 PM',
-                                'LAB B',
-                                Icons.functions_rounded,
-                                surfaceColor,
-                                borderColor,
-                                textColor,
-                                subTextColor,
+                              StreamBuilder<QuerySnapshot>(
+                                stream: DatabaseService().getTeacherClasses(
+                                  widget.uid ??
+                                      FirebaseAuth.instance.currentUser?.uid ??
+                                      '',
+                                ),
+                                builder: (context, snapshot) {
+                                  if (snapshot.hasError)
+                                    return Text('Error: ${snapshot.error}');
+                                  if (snapshot.connectionState ==
+                                      ConnectionState.waiting) {
+                                    return const Center(
+                                      child: CircularProgressIndicator(),
+                                    );
+                                  }
+
+                                  final classes = snapshot.data?.docs ?? [];
+
+                                  if (classes.isEmpty) {
+                                    return Container(
+                                      padding: const EdgeInsets.all(16),
+                                      decoration: BoxDecoration(
+                                        color: surfaceColor,
+                                        borderRadius: BorderRadius.circular(16),
+                                        border: Border.all(color: borderColor),
+                                      ),
+                                      child: Center(
+                                        child: Text(
+                                          'No classes scheduled for today',
+                                          style: GoogleFonts.lexend(
+                                            color: subTextColor,
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  }
+
+                                  return Column(
+                                    children: classes.map((doc) {
+                                      final data =
+                                          doc.data() as Map<String, dynamic>;
+                                      return Padding(
+                                        padding: const EdgeInsets.only(
+                                          bottom: 12,
+                                        ),
+                                        child: _buildTodayClassItem(
+                                          data['name'] ??
+                                              'Class', // e.g. "Advanced Physics"
+                                          '${data['section'] ?? ''} • ${data['time'] ?? '09:00 AM'}', // Store time in class for now
+                                          data['room'] ?? 'Online',
+                                          Icons.class_rounded,
+                                          surfaceColor,
+                                          borderColor,
+                                          textColor,
+                                          subTextColor,
+                                        ),
+                                      );
+                                    }).toList(),
+                                  );
+                                },
                               ),
                             ],
                           ),
@@ -194,60 +238,78 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
   }
 
   Widget _buildHeader(Color textColor, Color subTextColor, bool isDarkMode) {
+    final String? uid = widget.uid ?? FirebaseAuth.instance.currentUser?.uid;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+      child: StreamBuilder<DocumentSnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('users')
+            .doc(uid)
+            .snapshots(),
+        builder: (context, snapshot) {
+          final userData = snapshot.data?.data() as Map<String, dynamic>?;
+          final String name = userData?['fullName'] ?? 'Teacher';
+          // Use a default image if none provided
+          final String imageUrl =
+              userData?['imageUrl'] ??
+              'https://lh3.googleusercontent.com/aida-public/AB6AXuDDJ0xT_gismssEV3tDJT-5kYdGVXCrGNSCNKwmxu_icHAUrDUt8owJFEtSDe1qLPCXqxnROGnBHSIZ7GH-U6H3SMmGMkkJ1Ca6uCEO3HwTYcwMyyMIJgaAd-70rgAIsHbISjIG4SRNf8H5PQc0evW9-XY5d2A7fH_stOAZUy-RyDk09YD-JA16RkWy6use7JvQlpOkiNWqQ2cyujIfT8bjohE5T6AytBDjzLWE68a6BXk7LCzNDZd-p632NC373yt71pGpNoehdYk';
+
+          return Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Hi, Mr. Smith',
-                style: GoogleFonts.lexend(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: textColor,
-                ),
-              ),
-              Text(
-                'Welcome back to your classroom',
-                style: GoogleFonts.lexend(fontSize: 14, color: subTextColor),
-              ),
-            ],
-          ),
-          Stack(
-            children: [
-              ProfileImage(
-                imageUrl:
-                    'https://lh3.googleusercontent.com/aida-public/AB6AXuDDJ0xT_gismssEV3tDJT-5kYdGVXCrGNSCNKwmxu_icHAUrDUt8owJFEtSDe1qLPCXqxnROGnBHSIZ7GH-U6H3SMmGMkkJ1Ca6uCEO3HwTYcwMyyMIJgaAd-70rgAIsHbISjIG4SRNf8H5PQc0evW9-XY5d2A7fH_stOAZUy-RyDk09YD-JA16RkWy6use7JvQlpOkiNWqQ2cyujIfT8bjohE5T6AytBDjzLWE68a6BXk7LCzNDZd-p632NC373yt71pGpNoehdYk',
-                size: 48,
-                borderColor: primaryColor.withOpacity(0.2),
-                borderWidth: 2,
-              ),
-              Positioned(
-                bottom: -2,
-                right: -2,
-                child: Container(
-                  padding: const EdgeInsets.all(2),
-                  decoration: BoxDecoration(
-                    color: primaryColor,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: isDarkMode ? backgroundDark : backgroundLight,
-                      width: 2,
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Hi, $name',
+                    style: GoogleFonts.lexend(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: textColor,
                     ),
                   ),
-                  child: const Icon(
-                    Icons.edit_rounded,
-                    size: 10,
-                    color: Colors.white,
+                  Text(
+                    'Welcome back to your classroom',
+                    style: GoogleFonts.lexend(
+                      fontSize: 14,
+                      color: subTextColor,
+                    ),
                   ),
-                ),
+                ],
+              ),
+              Stack(
+                children: [
+                  ProfileImage(
+                    imageUrl: imageUrl,
+                    size: 48,
+                    borderColor: primaryColor.withOpacity(0.2),
+                    borderWidth: 2,
+                  ),
+                  Positioned(
+                    bottom: -2,
+                    right: -2,
+                    child: Container(
+                      padding: const EdgeInsets.all(2),
+                      decoration: BoxDecoration(
+                        color: primaryColor,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: isDarkMode ? backgroundDark : backgroundLight,
+                          width: 2,
+                        ),
+                      ),
+                      child: const Icon(
+                        Icons.edit_rounded,
+                        size: 10,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
-          ),
-        ],
+          );
+        },
       ),
     );
   }

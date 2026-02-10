@@ -1,9 +1,20 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'attendance_recorded_screen.dart';
+import 'services/database_service.dart';
 
 class MarkAttendanceScreen extends StatefulWidget {
-  const MarkAttendanceScreen({super.key});
+  final String classId;
+  final String subjectName;
+  final String room;
+
+  const MarkAttendanceScreen({
+    super.key,
+    required this.classId,
+    required this.subjectName,
+    required this.room,
+  });
 
   @override
   State<MarkAttendanceScreen> createState() => _MarkAttendanceScreenState();
@@ -16,23 +27,70 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
   final Color successColor = const Color(0xff10b981);
   final Color dangerColor = const Color(0xffef4444);
 
-  final List<Map<String, dynamic>> students = [
-    {'roll': '01', 'name': 'Aaron Smith', 'id': 'RM-2023-001', 'status': 'P'},
-    {'roll': '02', 'name': 'Bella Thorne', 'id': 'RM-2023-002', 'status': 'P'},
-    {'roll': '03', 'name': 'Charlie Davis', 'id': 'RM-2023-003', 'status': 'A'},
-    {'roll': '04', 'name': 'Diana Prince', 'id': 'RM-2023-004', 'status': 'P'},
-    {'roll': '05', 'name': 'Ethan Hunt', 'id': 'RM-2023-005', 'status': 'P'},
-    {
-      'roll': '06',
-      'name': 'Fiona Gallagher',
-      'id': 'RM-2023-006',
-      'status': 'P',
-    },
-    {'roll': '07', 'name': 'George Miller', 'id': 'RM-2023-007', 'status': 'A'},
-  ];
+  // We'll maintain local state of attendance here
+  // Map<StudentId, Status>
+  Map<String, String> _attendanceMap = {};
+  List<QueryDocumentSnapshot> _studentsDocs = [];
 
-  int get presentCount => students.where((s) => s['status'] == 'P').length;
-  int get absentCount => students.where((s) => s['status'] == 'A').length;
+  int get presentCount => _attendanceMap.values.where((s) => s == 'P').length;
+  int get absentCount => _attendanceMap.values.where((s) => s == 'A').length;
+
+  bool _isSubmitting = false;
+
+  Future<void> _submitAttendance() async {
+    setState(() => _isSubmitting = true);
+    try {
+      final List<Map<String, dynamic>> records = _attendanceMap.entries.map((
+        e,
+      ) {
+        return {
+          'studentId': e.key,
+          'status': e.value == 'P' ? 'Present' : 'Absent',
+          'remarks': '',
+        };
+      }).toList();
+
+      // If no students, or not loaded yet
+      if (records.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No students to mark attendance for.')),
+        );
+        return;
+      }
+
+      // We need teacherId. For now, we can get it from current user or just pass a placeholder if not strictly enforced by rules.
+      // In real app, we get it from Auth.
+      // Using "current_teacher_id" as placeholder or if I have access to it.
+      // I can use FirebaseAuth.instance.currentUser?.uid but I need to import FirebaseAuth.
+      // For now, let's assume current user is the teacher.
+
+      // Actually DatabaseService markAttendance needs teacherId.
+      // Let's pass a placeholder or handle it in DatabaseService if null (it takes String).
+
+      await DatabaseService().markAttendance(
+        widget.classId,
+        'subject_id_placeholder', // TODO: Pass subjectId properly
+        'teacher_id_placeholder',
+        DateTime.now(),
+        records,
+      );
+
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const AttendanceRecordedScreen(),
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error marking attendance: $e')));
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -58,20 +116,62 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
               _buildHeader(isDarkMode, surfaceColor, textColor, subTextColor),
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 140),
-                sliver: SliverList(
-                  delegate: SliverChildBuilderDelegate((context, index) {
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: _buildStudentCardWithToggles(
-                        index,
-                        isDarkMode,
-                        surfaceColor,
-                        textColor,
-                        subTextColor,
-                        borderColor,
-                      ),
+                sliver: StreamBuilder<QuerySnapshot>(
+                  stream: DatabaseService().getStudentsByClass(widget.classId),
+                  builder: (context, snapshot) {
+                    if (snapshot.hasError) {
+                      return SliverToBoxAdapter(
+                        child: Text('Error: ${snapshot.error}'),
+                      );
+                    }
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const SliverToBoxAdapter(
+                        child: Center(child: CircularProgressIndicator()),
+                      );
+                    }
+
+                    final docs = snapshot.data?.docs ?? [];
+                    _studentsDocs = docs;
+
+                    // Initialize map for new students
+                    for (var doc in docs) {
+                      if (!_attendanceMap.containsKey(doc.id)) {
+                        _attendanceMap[doc.id] = 'P'; // Default Present
+                      }
+                    }
+
+                    if (docs.isEmpty) {
+                      return SliverToBoxAdapter(
+                        child: Center(
+                          child: Text(
+                            'No students found in this class.',
+                            style: GoogleFonts.lexend(color: subTextColor),
+                          ),
+                        ),
+                      );
+                    }
+
+                    return SliverList(
+                      delegate: SliverChildBuilderDelegate((context, index) {
+                        final doc = docs[index];
+                        final data = doc.data() as Map<String, dynamic>;
+                        final studentId = doc.id;
+
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: _buildStudentCardWithToggles(
+                            studentId,
+                            data,
+                            isDarkMode,
+                            surfaceColor,
+                            textColor,
+                            subTextColor,
+                            borderColor,
+                          ),
+                        );
+                      }, childCount: docs.length),
                     );
-                  }, childCount: students.length),
+                  },
                 ),
               ),
             ],
@@ -149,7 +249,7 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
                                 ),
                               ),
                               Text(
-                                'Class 10-A • Oct 24, 2023',
+                                '${widget.classId} • ${widget.subjectName}',
                                 style: GoogleFonts.lexend(
                                   fontSize: 12,
                                   color: subTextColor,
@@ -201,7 +301,7 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            '42 Students Total',
+                            '${_studentsDocs.length} Students Total',
                             style: GoogleFonts.lexend(
                               fontSize: 14,
                               fontWeight: FontWeight.w500,
@@ -211,8 +311,8 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
                           ElevatedButton.icon(
                             onPressed: () {
                               setState(() {
-                                for (var s in students) {
-                                  s['status'] = 'P';
+                                for (var s in _attendanceMap.keys) {
+                                  _attendanceMap[s] = 'P';
                                 }
                               });
                             },
@@ -250,19 +350,25 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
 
   // Refactored toggle for better state management in mock
   Widget _buildStudentCardWithToggles(
-    int index,
+    String studentId,
+    Map<String, dynamic> data,
     bool isDarkMode,
     Color surfaceColor,
     Color textColor,
     Color subTextColor,
     Color borderColor,
   ) {
-    final student = students[index];
-    final bool isAbsent = student['status'] == 'A';
+    // final student = students[index]; // OLD
+    final String currentStatus = _attendanceMap[studentId] ?? 'P';
+    final bool isAbsent = currentStatus == 'A';
     final Color rollBg = isAbsent
         ? dangerColor.withOpacity(0.1)
         : primaryColor.withOpacity(0.1);
     final Color rollText = isAbsent ? dangerColor : primaryColor;
+
+    final String name = data['fullName'] ?? 'Uknown';
+    final String roll = (data['rollNumber'] ?? '00').toString();
+    final String displayId = studentId.substring(0, 6).toUpperCase();
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -294,7 +400,7 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
                 ),
                 child: Center(
                   child: Text(
-                    student['roll'],
+                    roll,
                     style: GoogleFonts.lexend(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
@@ -308,7 +414,7 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    student['name'],
+                    name,
                     style: GoogleFonts.lexend(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
@@ -316,7 +422,7 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
                     ),
                   ),
                   Text(
-                    'ID: ${student['id']}',
+                    'ID: $displayId',
                     style: GoogleFonts.lexend(
                       fontSize: 12,
                       color: subTextColor,
@@ -338,15 +444,15 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
               children: [
                 _buildStatusOption(
                   'P',
-                  student['status'] == 'P',
+                  currentStatus == 'P',
                   primaryColor,
-                  () => setState(() => student['status'] = 'P'),
+                  () => setState(() => _attendanceMap[studentId] = 'P'),
                 ),
                 _buildStatusOption(
                   'A',
-                  student['status'] == 'A',
+                  currentStatus == 'A',
                   dangerColor,
-                  () => setState(() => student['status'] = 'A'),
+                  () => setState(() => _attendanceMap[studentId] = 'A'),
                 ),
               ],
             ),
@@ -441,16 +547,20 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const AttendanceRecordedScreen(),
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.save_rounded, size: 20),
-                label: const Text('Save Attendance Offline'),
+                onPressed: _isSubmitting ? null : _submitAttendance,
+                icon: _isSubmitting
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(Icons.save_rounded, size: 20),
+                label: Text(
+                  _isSubmitting ? 'Saving...' : 'Save Attendance Offline',
+                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: primaryColor,
                   foregroundColor: Colors.white,

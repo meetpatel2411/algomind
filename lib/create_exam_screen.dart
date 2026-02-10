@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'services/database_service.dart';
 
 class CreateExamScreen extends StatefulWidget {
   const CreateExamScreen({super.key});
@@ -16,6 +17,16 @@ class _CreateExamScreenState extends State<CreateExamScreen> {
 
   bool _isOfflineAvailable = true;
 
+  final TextEditingController _titleController = TextEditingController();
+  final TextEditingController _durationController = TextEditingController();
+  final TextEditingController _marksController = TextEditingController();
+
+  // Selections
+  String _selectedClass = 'Grade 10-A';
+  String _selectedSubject = 'Mathematics';
+
+  bool _isCreating = false;
+
   final List<Map<String, dynamic>> _questions = [
     {
       'type': 'MCQ',
@@ -24,6 +35,44 @@ class _CreateExamScreenState extends State<CreateExamScreen> {
     },
     {'type': 'Open Text', 'question': ''},
   ];
+
+  Future<void> _createExam() async {
+    setState(() => _isCreating = true);
+    try {
+      if (_titleController.text.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please enter exam title')),
+        );
+        return;
+      }
+
+      final examData = {
+        'title': _titleController.text.trim(),
+        'class': _selectedClass, // In real app, store classId
+        'subject': _selectedSubject, // In real app, store subjectId
+        'duration': '${_durationController.text.trim()} Mins',
+        'totalMarks': int.tryParse(_marksController.text.trim()) ?? 100,
+        'status': 'Upcoming',
+        'isOffline': _isOfflineAvailable,
+        'date': 'Oct 25, 2023', // Placeholder, should be selected date
+      };
+
+      await DatabaseService().createExam(examData, _questions);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Exam created successfully!')),
+        );
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error creating exam: $e')));
+    } finally {
+      if (mounted) setState(() => _isCreating = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -173,6 +222,8 @@ class _CreateExamScreenState extends State<CreateExamScreen> {
                 surfaceColor,
                 borderColor,
                 subTextColor,
+                (val) => setState(() => _selectedClass = val!),
+                _selectedClass,
               ),
             ),
             const SizedBox(width: 12),
@@ -183,6 +234,8 @@ class _CreateExamScreenState extends State<CreateExamScreen> {
                 surfaceColor,
                 borderColor,
                 subTextColor,
+                (val) => setState(() => _selectedSubject = val!),
+                _selectedSubject,
               ),
             ),
           ],
@@ -194,6 +247,7 @@ class _CreateExamScreenState extends State<CreateExamScreen> {
           surfaceColor,
           borderColor,
           subTextColor,
+          controller: _titleController,
         ),
         const SizedBox(height: 16),
         Row(
@@ -206,6 +260,7 @@ class _CreateExamScreenState extends State<CreateExamScreen> {
                 borderColor,
                 subTextColor,
                 keyboardType: TextInputType.number,
+                controller: _durationController,
               ),
             ),
             const SizedBox(width: 12),
@@ -217,6 +272,7 @@ class _CreateExamScreenState extends State<CreateExamScreen> {
                 borderColor,
                 subTextColor,
                 keyboardType: TextInputType.number,
+                controller: _marksController,
               ),
             ),
           ],
@@ -231,6 +287,8 @@ class _CreateExamScreenState extends State<CreateExamScreen> {
     Color surfaceColor,
     Color borderColor,
     Color subTextColor,
+    ValueChanged<String?>? onChanged,
+    String? value,
   ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -255,14 +313,14 @@ class _CreateExamScreenState extends State<CreateExamScreen> {
           ),
           child: DropdownButtonHideUnderline(
             child: DropdownButton<String>(
-              value: options[0],
+              value: value ?? options[0],
               icon: Icon(
                 Icons.expand_more_rounded,
                 color: subTextColor.withOpacity(0.5),
               ),
               isExpanded: true,
               style: GoogleFonts.lexend(fontSize: 14, color: subTextColor),
-              onChanged: (String? newValue) {},
+              onChanged: onChanged,
               items: options.map<DropdownMenuItem<String>>((String value) {
                 return DropdownMenuItem<String>(
                   value: value,
@@ -283,6 +341,7 @@ class _CreateExamScreenState extends State<CreateExamScreen> {
     Color borderColor,
     Color subTextColor, {
     TextInputType keyboardType = TextInputType.text,
+    TextEditingController? controller,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -306,6 +365,7 @@ class _CreateExamScreenState extends State<CreateExamScreen> {
             border: Border.all(color: borderColor),
           ),
           child: TextField(
+            controller: controller,
             keyboardType: keyboardType,
             style: GoogleFonts.lexend(fontSize: 14),
             decoration: InputDecoration(
@@ -680,7 +740,7 @@ class _CreateExamScreenState extends State<CreateExamScreen> {
         color: primaryColor,
         borderRadius: BorderRadius.circular(16),
         child: InkWell(
-          onTap: () {},
+          onTap: _isCreating ? null : _createExam,
           borderRadius: BorderRadius.circular(16),
           child: Container(
             padding: const EdgeInsets.symmetric(vertical: 16),
@@ -688,10 +748,20 @@ class _CreateExamScreenState extends State<CreateExamScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.save_rounded, color: Colors.white, size: 20),
+                if (_isCreating)
+                  const SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                else
+                  const Icon(Icons.save_rounded, color: Colors.white, size: 20),
                 const SizedBox(width: 8),
                 Text(
-                  'Create Exam',
+                  _isCreating ? 'Creating...' : 'Create Exam',
                   style: GoogleFonts.lexend(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,

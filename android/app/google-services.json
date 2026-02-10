@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "663583529299",
+    "project_id": "routeminds-d5e1b",
+    "storage_bucket": "routeminds-d5e1b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:663583529299:android:48103a2f904166b75229a6",
+        "android_client_info": {
+          "package_name": "com.example.routeminds"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyALVpARa7jQYKeed4u0QX_gMA51sIQt4yc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

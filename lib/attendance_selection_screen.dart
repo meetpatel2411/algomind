@@ -1,5 +1,8 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'services/database_service.dart';
 import 'manage_exams_screen.dart';
 import 'manage_students_screen.dart';
 import 'mark_attendance_screen.dart';
@@ -300,81 +303,67 @@ class _AttendanceSelectionScreenState extends State<AttendanceSelectionScreen> {
     Color subTextColor,
     bool isDarkMode,
   ) {
-    return ListView(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(bottom: 16),
-          child: Text(
-            'YOUR SCHEDULE',
-            style: GoogleFonts.lexend(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              color: subTextColor.withOpacity(0.6),
-              letterSpacing: 1.5,
+    return StreamBuilder<QuerySnapshot>(
+      stream: DatabaseService().getTeacherClasses(
+        FirebaseAuth.instance.currentUser?.uid ?? '',
+      ),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) return Text('Error: ${snapshot.error}');
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        final classes = snapshot.data?.docs ?? [];
+
+        if (classes.isEmpty) {
+          return Center(
+            child: Text(
+              'No classes found.',
+              style: GoogleFonts.lexend(color: subTextColor),
             ),
-          ),
-        ),
-        _buildClassCard(
-          status: 'Completed',
-          room: 'Room 402',
-          subject: 'Mathematics',
-          info: 'Grade 10-A • 42 Students',
-          time: '08:30 AM',
-          surfaceColor: surfaceColor,
-          borderColor: borderColor,
-          textColor: textColor,
-          subTextColor: subTextColor,
-          isDarkMode: isDarkMode,
-          isSynced: true,
-          students: 42,
-        ),
-        const SizedBox(height: 16),
-        _buildClassCard(
-          status: 'In Progress',
-          room: 'Lab 2',
-          subject: 'Physics Practicals',
-          info: 'Grade 11-C • 28 Students',
-          time: '10:45 AM',
-          surfaceColor: surfaceColor,
-          borderColor: primaryColor.withOpacity(0.3),
-          textColor: textColor,
-          subTextColor: subTextColor,
-          isDarkMode: isDarkMode,
-          isInProgress: true,
-          isLocal: true,
-        ),
-        const SizedBox(height: 16),
-        _buildClassCard(
-          status: 'Upcoming',
-          room: 'Room 102',
-          subject: 'History',
-          info: 'Grade 09-B • 35 Students',
-          time: '01:00 PM',
-          surfaceColor: surfaceColor,
-          borderColor: borderColor,
-          textColor: textColor,
-          subTextColor: subTextColor,
-          isDarkMode: isDarkMode,
-          isUpcoming: true,
-        ),
-        const SizedBox(height: 16),
-        _buildClassCard(
-          status: 'Upcoming',
-          room: 'Gym Hall',
-          subject: 'Physical Ed.',
-          info: 'Grade 10-A • 42 Students',
-          time: '02:30 PM',
-          surfaceColor: surfaceColor,
-          borderColor: borderColor,
-          textColor: textColor,
-          subTextColor: subTextColor,
-          isDarkMode: isDarkMode,
-          isUpcoming: true,
-          simple: true,
-        ),
-        const SizedBox(height: 100),
-      ],
+          );
+        }
+
+        return ListView(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: Text(
+                'YOUR CLASSES',
+                style: GoogleFonts.lexend(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: subTextColor.withOpacity(0.6),
+                  letterSpacing: 1.5,
+                ),
+              ),
+            ),
+            ...classes.map((doc) {
+              final data = doc.data() as Map<String, dynamic>;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: _buildClassCard(
+                  status: 'Upcoming', // Default status for now
+                  room: data['room'] ?? 'Online',
+                  subject: data['name'] ?? 'Class',
+                  info:
+                      '${data['section'] ?? ''} • ${data['studentCount'] ?? 0} Students',
+                  time: data['time'] ?? '09:00 AM',
+                  surfaceColor: surfaceColor,
+                  borderColor: borderColor,
+                  textColor: textColor,
+                  subTextColor: subTextColor,
+                  isDarkMode: isDarkMode,
+                  isUpcoming: true,
+                  classId: doc.id,
+                ),
+              );
+            }).toList(),
+            const SizedBox(height: 100),
+          ],
+        );
+      },
     );
   }
 
@@ -394,7 +383,7 @@ class _AttendanceSelectionScreenState extends State<AttendanceSelectionScreen> {
     bool isUpcoming = false,
     bool isLocal = false,
     bool simple = false,
-    int students = 0,
+    String? classId,
   }) {
     Color? statusBg;
     Color? statusText;
@@ -517,8 +506,11 @@ class _AttendanceSelectionScreenState extends State<AttendanceSelectionScreen> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) =>
-                                  const MarkAttendanceScreen(),
+                              builder: (context) => MarkAttendanceScreen(
+                                classId: classId ?? 'class_id_placeholder',
+                                subjectName: subject,
+                                room: room,
+                              ),
                             ),
                           );
                         },

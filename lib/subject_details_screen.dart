@@ -151,7 +151,7 @@ class SubjectDetailsScreen extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(icon, color: color, size: 20),
@@ -176,7 +176,7 @@ class SubjectDetailsScreen extends StatelessWidget {
         border: Border.all(color: borderColor),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: Colors.black.withValues(alpha: 0.02),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -263,7 +263,7 @@ class SubjectDetailsScreen extends StatelessWidget {
                 borderRadius: BorderRadius.circular(4),
                 boxShadow: [
                   BoxShadow(
-                    color: color.withOpacity(0.3),
+                    color: color.withValues(alpha: 0.3),
                     blurRadius: 4,
                     offset: const Offset(0, 2),
                   ),
@@ -300,19 +300,19 @@ class SubjectDetailsScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: isLocked
             ? (isDarkMode
-                  ? Colors.white.withOpacity(0.05)
+                  ? Colors.white.withValues(alpha: 0.05)
                   : const Color(0xfff8fafc))
             : surfaceColor,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: isInProgress ? color.withOpacity(0.4) : borderColor,
+          color: isInProgress ? color.withValues(alpha: 0.4) : borderColor,
           width: isInProgress ? 2 : 1,
         ),
         boxShadow: isLocked
             ? null
             : [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.02),
+                  color: Colors.black.withValues(alpha: 0.02),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 ),
@@ -337,7 +337,7 @@ class SubjectDetailsScreen extends StatelessWidget {
                             style: GoogleFonts.lexend(
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
-                              color: subTextColor.withOpacity(0.6),
+                              color: subTextColor.withValues(alpha: 0.6),
                             ),
                           ),
                           if (!isLocked) ...[
@@ -352,7 +352,7 @@ class SubjectDetailsScreen extends StatelessWidget {
                             Icon(
                               Icons.cloud_download_rounded,
                               size: 16,
-                              color: subTextColor.withOpacity(0.4),
+                              color: subTextColor.withValues(alpha: 0.4),
                             ),
                           ],
                         ],
@@ -364,7 +364,7 @@ class SubjectDetailsScreen extends StatelessWidget {
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                           color: isLocked
-                              ? textColor.withOpacity(0.6)
+                              ? textColor.withValues(alpha: 0.6)
                               : textColor,
                         ),
                       ),
@@ -375,7 +375,7 @@ class SubjectDetailsScreen extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: Colors.green.withOpacity(0.1),
+                      color: Colors.green.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
@@ -391,7 +391,7 @@ class SubjectDetailsScreen extends StatelessWidget {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.amber.withOpacity(0.1),
+                      color: Colors.amber.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
@@ -406,7 +406,7 @@ class SubjectDetailsScreen extends StatelessWidget {
                 else if (isLocked)
                   Icon(
                     Icons.lock_rounded,
-                    color: subTextColor.withOpacity(0.4),
+                    color: subTextColor.withValues(alpha: 0.4),
                     size: 24,
                   ),
               ],
@@ -448,7 +448,7 @@ class SubjectDetailsScreen extends StatelessWidget {
         Icon(
           icon,
           size: 18,
-          color: isLocked ? subTextColor.withOpacity(0.4) : subTextColor,
+          color: isLocked ? subTextColor.withValues(alpha: 0.4) : subTextColor,
         ),
         const SizedBox(width: 6),
         Text(
@@ -456,7 +456,7 @@ class SubjectDetailsScreen extends StatelessWidget {
           style: GoogleFonts.lexend(
             fontSize: 14,
             fontWeight: FontWeight.w500,
-            color: isLocked ? subTextColor.withOpacity(0.4) : subTextColor,
+            color: isLocked ? subTextColor.withValues(alpha: 0.4) : subTextColor,
           ),
         ),
       ],
@@ -477,7 +477,7 @@ class SubjectDetailsScreen extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
           color: isDarkMode
-              ? Colors.white.withOpacity(0.05)
+              ? Colors.white.withValues(alpha: 0.05)
               : const Color(0xffe2e8f0),
           borderRadius: BorderRadius.circular(16),
         ),
@@ -487,7 +487,7 @@ class SubjectDetailsScreen extends StatelessWidget {
             style: GoogleFonts.lexend(
               fontSize: 14,
               fontWeight: FontWeight.bold,
-              color: subTextColor.withOpacity(0.6),
+              color: subTextColor.withValues(alpha: 0.6),
             ),
           ),
         ),
@@ -499,9 +499,9 @@ class SubjectDetailsScreen extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          color: Colors.green.withOpacity(0.05),
+          color: Colors.green.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.green.withOpacity(0.1)),
+          border: Border.all(color: Colors.green.withValues(alpha: 0.1)),
         ),
         child: Center(
           child: Text(
@@ -523,7 +523,7 @@ class SubjectDetailsScreen extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: primaryColor.withOpacity(0.3),
+              color: primaryColor.withValues(alpha: 0.3),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),

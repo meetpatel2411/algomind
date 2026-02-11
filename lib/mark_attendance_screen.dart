@@ -253,7 +253,7 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
                           width: 48,
                           height: 48,
                           decoration: BoxDecoration(
-                            color: primaryColor.withOpacity(0.1),
+                            color: primaryColor.withValues(alpha: 0.1),
                             shape: BoxShape.circle,
                           ),
                           alignment: Alignment.center,
@@ -296,7 +296,7 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
                             vertical: 6,
                           ),
                           decoration: BoxDecoration(
-                            color: statusColor.withOpacity(0.1),
+                            color: statusColor.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Row(

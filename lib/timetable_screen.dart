@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'student_dashboard.dart';
-import 'enrolled_courses_screen.dart';
-import 'learning_analytics_screen.dart';
+import 'widgets/student_bottom_navigation.dart';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:intl/intl.dart';
+import 'services/database_service.dart';
+import 'widgets/connectivity_indicator.dart';
 
 class TimetableScreen extends StatefulWidget {
-  const TimetableScreen({super.key});
+  final String? uid;
+  const TimetableScreen({super.key, this.uid});
 
   @override
   State<TimetableScreen> createState() => _TimetableScreenState();
@@ -17,21 +22,37 @@ class _TimetableScreenState extends State<TimetableScreen> {
   final Color backgroundDark = const Color(0xff101722);
   final Color successColor = const Color(0xff10b981);
 
-  int _selectedIndex = 2; // Timetable is index 2
+  int _activeDayIndex = 0;
+  List<DateTime> _weekDates = [];
 
-  // Standardized Nav in previous task:
-  // Home (0), Courses (1), Exams (2), Analytics (3), Profile (4).
-  // Wait, let me check the standardized nav I implemented earlier.
+  @override
+  void initState() {
+    super.initState();
+    _generateWeekDates();
+  }
 
-  int _activeDayIndex = 1; // Tuesday (13) is selected in HTML
+  void _generateWeekDates() {
+    final now = DateTime.now();
+    // Start from Monday of current week
+    // weekday 1=Mon, 7=Sun
+    final monday = now.subtract(Duration(days: now.weekday - 1));
+    _weekDates = List.generate(5, (index) => monday.add(Duration(days: index)));
 
-  final List<Map<String, String>> _days = [
-    {'day': 'Mon', 'date': '12'},
-    {'day': 'Tue', 'date': '13'},
-    {'day': 'Wed', 'date': '14'},
-    {'day': 'Thu', 'date': '15'},
-    {'day': 'Fri', 'date': '16'},
-  ];
+    // Set active day to today if it's Mon-Fri, else Monday
+    if (now.weekday <= 5) {
+      _activeDayIndex = now.weekday - 1;
+    } else {
+      _activeDayIndex = 0;
+    }
+  }
+
+  String _formatDate(DateTime date) {
+    return DateFormat('d').format(date);
+  }
+
+  String _formatDay(DateTime date) {
+    return DateFormat('E').format(date);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -50,102 +71,266 @@ class _TimetableScreenState extends State<TimetableScreen> {
 
     return Scaffold(
       backgroundColor: bgColor,
-      body: SafeArea(
-        child: Stack(
-          children: [
-            Column(
-              children: [
-                _buildHeader(
-                  surfaceColor,
-                  textColor,
-                  subTextColor,
-                  borderColor,
-                  isDarkMode,
-                ),
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(16, 24, 16, 120),
-                    child: Column(
-                      children: [
-                        _buildClassCard(
-                          timeStart: '08:00',
-                          timeEnd: '09:00',
-                          subject: 'Mathematics',
-                          instructor: 'Dr. Emily Smith',
-                          room: 'Room 302, Block A',
-                          status: 'Completed',
-                          isDarkMode: isDarkMode,
-                          surfaceColor: surfaceColor,
-                          textColor: textColor,
-                          subTextColor: subTextColor,
-                          borderColor: borderColor,
-                        ),
-                        const SizedBox(height: 16),
-                        _buildLiveClassCard(
-                          timeStart: '10:15',
-                          timeEnd: '11:15',
-                          subject: 'Quantum Physics',
-                          instructor: 'Prof. Julian Adams',
-                          room: 'Physics Lab B, 1st Floor',
-                          progress: 0.65,
-                          startedAgo: '40m ago',
-                          remaining: '20m remaining',
-                          isDarkMode: isDarkMode,
-                          surfaceColor: surfaceColor,
-                          textColor: textColor,
-                          subTextColor: subTextColor,
-                        ),
-                        const SizedBox(height: 16),
-                        _buildBreakSeparator(isDarkMode, borderColor),
-                        const SizedBox(height: 16),
-                        _buildClassCard(
-                          timeStart: '13:00',
-                          timeEnd: '14:00',
-                          subject: 'English Literature',
-                          instructor: 'Ms. Sarah Jenkins',
-                          room: 'Lecture Hall 12',
-                          isDarkMode: isDarkMode,
-                          surfaceColor: surfaceColor,
-                          textColor: textColor,
-                          subTextColor: subTextColor,
-                          borderColor: borderColor,
-                        ),
-                        const SizedBox(height: 16),
-                        _buildClassCard(
-                          timeStart: '14:15',
-                          timeEnd: '15:15',
-                          subject: 'History of Arts',
-                          instructor: 'Prof. Robert Vance',
-                          room: 'Studio 04',
-                          isDarkMode: isDarkMode,
-                          surfaceColor: surfaceColor,
-                          textColor: textColor,
-                          subTextColor: subTextColor,
-                          borderColor: borderColor,
-                        ),
-                        const SizedBox(height: 24),
-                        Text(
-                          "End of Tuesday's schedule",
-                          style: GoogleFonts.lexend(
-                            fontSize: 12,
-                            color: subTextColor,
-                            fontStyle: FontStyle.italic,
+      body: ConnectivityIndicator(
+        child: SafeArea(
+          child: Stack(
+            children: [
+              Column(
+                children: [
+                  _buildHeader(
+                    surfaceColor,
+                    textColor,
+                    subTextColor,
+                    borderColor,
+                    isDarkMode,
+                  ),
+                  Expanded(
+                    child: FutureBuilder<Map<String, dynamic>?>(
+                      future: DatabaseService().getUserProfile(
+                        widget.uid ??
+                            FirebaseAuth.instance.currentUser?.uid ??
+                            '',
+                      ),
+                      builder: (context, userSnapshot) {
+                        if (userSnapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return const Center(
+                            child: CircularProgressIndicator(),
+                          );
+                        }
+
+                        final classId =
+                            userSnapshot.data?['classId'] as String?;
+
+                        if (classId == null || classId.isEmpty) {
+                          return Center(
+                            child: Text(
+                              'Not enrolled in any class.',
+                              style: GoogleFonts.lexend(color: subTextColor),
+                            ),
+                          );
+                        }
+
+                        // Fetch schedule for the selected day
+                        return StreamBuilder<QuerySnapshot>(
+                          stream: DatabaseService().getStudentSchedule(
+                            classId,
+                            _weekDates[_activeDayIndex],
                           ),
-                        ),
-                      ],
+                          builder: (context, snapshot) {
+                            if (snapshot.hasError) {
+                              return Center(
+                                child: Text('Error: ${snapshot.error}'),
+                              );
+                            }
+                            if (snapshot.connectionState ==
+                                ConnectionState.waiting) {
+                              return const Center(
+                                child: CircularProgressIndicator(),
+                              );
+                            }
+
+                            if (!snapshot.hasData ||
+                                snapshot.data!.docs.isEmpty) {
+                              return Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.event_busy_rounded,
+                                      size: 64,
+                                      color: subTextColor.withValues(
+                                        alpha: 0.5,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Text(
+                                      'No classes scheduled for today.',
+                                      style: GoogleFonts.lexend(
+                                        fontSize: 16,
+                                        color: subTextColor,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }
+
+                            // Sort by start time. Firestore query might not be sorted if we filtered by dayOfWeek only.
+                            // We need to parse time strings "HH:MM:SS"
+                            final docs = snapshot.data!.docs;
+
+                            // Simple sort helper
+                            int parseTimeToInt(String time) {
+                              final parts = time.split(':');
+                              return int.parse(parts[0]) * 60 +
+                                  int.parse(parts[1]);
+                            }
+
+                            docs.sort((a, b) {
+                              final tA = a['startTime'] as String;
+                              final tB = b['startTime'] as String;
+                              return parseTimeToInt(
+                                tA,
+                              ).compareTo(parseTimeToInt(tB));
+                            });
+
+                            return SingleChildScrollView(
+                              padding: const EdgeInsets.fromLTRB(
+                                16,
+                                24,
+                                16,
+                                120,
+                              ),
+                              child: Column(
+                                children: [
+                                  ...docs.map((doc) {
+                                    final data =
+                                        doc.data() as Map<String, dynamic>;
+                                    return _buildScheduleItem(
+                                      data,
+                                      isDarkMode,
+                                      surfaceColor,
+                                      textColor,
+                                      subTextColor,
+                                      borderColor,
+                                    );
+                                  }),
+                                  const SizedBox(height: 24),
+                                  Text(
+                                    "End of ${_formatDay(_weekDates[_activeDayIndex])}'s schedule",
+                                    style: GoogleFonts.lexend(
+                                      fontSize: 12,
+                                      color: subTextColor,
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        );
+                      },
                     ),
                   ),
+                ],
+              ),
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                child: StudentBottomNavigation(
+                  currentIndex: 2,
+                  isDarkMode: isDarkMode,
+                  uid: widget.uid,
                 ),
-              ],
-            ),
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: _buildBottomNav(surfaceColor, subTextColor, isDarkMode),
-            ),
-          ],
+              ),
+            ],
+          ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildScheduleItem(
+    Map<String, dynamic> data,
+    bool isDarkMode,
+    Color surfaceColor,
+    Color textColor,
+    Color subTextColor,
+    Color borderColor,
+  ) {
+    // Determine if Live
+    final startTimeStr = data['startTime'] as String; // "HH:MM:SS"
+    final endTimeStr = data['endTime'] as String;
+
+    // Parse to today's DateTime for comparison (assuming schedule repeats weekly)
+    final now = DateTime.now();
+    // Use _weekDates[_activeDayIndex] to get the date of the card?
+    // Determine if the card represents "Today".
+    // If _weekDates[_activeDayIndex] is NOT today, then it can't be live now.
+
+    bool isTodaySelected =
+        _weekDates[_activeDayIndex].day == now.day &&
+        _weekDates[_activeDayIndex].month == now.month &&
+        _weekDates[_activeDayIndex].year == now.year;
+
+    bool isLive = false;
+    bool isCompleted = false;
+
+    // Simple parsing for HH:MM
+    // We only care about time comparison if it IS today
+    if (isTodaySelected) {
+      final sParts = startTimeStr.split(':');
+      final eParts = endTimeStr.split(':');
+
+      final start = DateTime(
+        now.year,
+        now.month,
+        now.day,
+        int.parse(sParts[0]),
+        int.parse(sParts[1]),
+      );
+      final end = DateTime(
+        now.year,
+        now.month,
+        now.day,
+        int.parse(eParts[0]),
+        int.parse(eParts[1]),
+      );
+
+      if (now.isAfter(start) && now.isBefore(end)) {
+        isLive = true;
+      } else if (now.isAfter(end)) {
+        isCompleted = true;
+      }
+    }
+
+    final subject = data['subjectName'] ?? 'Unknown';
+    // Timetable doc has 'room'
+    final room = data['room'] ?? 'TBD';
+    // 'teacherId' is stored. Need to fetch name or just use placeholder?
+    // To save reads, lets use "Instructor" or if we have teacher name in timetable (seed might put it?)
+    // Seed puts 'teacherId'.
+    final instructor = 'Instructor'; // Fallback
+
+    final timeStart = startTimeStr.substring(0, 5);
+    final timeEnd = endTimeStr.substring(0, 5);
+
+    if (isLive) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 16),
+        child: _buildLiveClassCard(
+          timeStart: timeStart,
+          timeEnd: timeEnd,
+          subject: subject,
+          instructor: instructor,
+          room: room,
+          progress: 0.5, // Mock progress for now
+          startedAgo: 'Just now',
+          remaining: 'Ongoing',
+          isDarkMode: isDarkMode,
+          surfaceColor: surfaceColor,
+          textColor: textColor,
+          subTextColor: subTextColor,
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: _buildClassCard(
+        timeStart: timeStart,
+        timeEnd: timeEnd,
+        subject: subject,
+        instructor: instructor,
+        room: room,
+        status: isCompleted ? 'Completed' : null,
+        isDarkMode: isDarkMode,
+        surfaceColor: surfaceColor,
+        textColor: textColor,
+        subTextColor: subTextColor,
+        borderColor: borderColor,
       ),
     );
   }
@@ -202,9 +387,21 @@ class _TimetableScreenState extends State<TimetableScreen> {
                 ],
               ),
               ElevatedButton(
-                onPressed: () {},
+                onPressed: () {
+                  // Set to Today
+                  final now = DateTime.now();
+                  // find index of today in _weekDates
+                  int idx = _weekDates.indexWhere(
+                    (d) => d.day == now.day && d.month == now.month,
+                  );
+                  if (idx != -1) {
+                    setState(() {
+                      _activeDayIndex = idx;
+                    });
+                  }
+                },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: primaryColor.withOpacity(0.1),
+                  backgroundColor: primaryColor.withValues(alpha: 0.1),
                   foregroundColor: primaryColor,
                   elevation: 0,
                   padding: const EdgeInsets.symmetric(
@@ -229,9 +426,9 @@ class _TimetableScreenState extends State<TimetableScreen> {
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
-              children: _days.asMap().entries.map((entry) {
+              children: _weekDates.asMap().entries.map((entry) {
                 int idx = entry.key;
-                Map<String, String> day = entry.value;
+                DateTime date = entry.value;
                 bool isSelected = _activeDayIndex == idx;
 
                 return Padding(
@@ -252,7 +449,7 @@ class _TimetableScreenState extends State<TimetableScreen> {
                         boxShadow: isSelected
                             ? [
                                 BoxShadow(
-                                  color: primaryColor.withOpacity(0.25),
+                                  color: primaryColor.withValues(alpha: 0.25),
                                   blurRadius: 10,
                                   offset: const Offset(0, 4),
                                 ),
@@ -262,18 +459,18 @@ class _TimetableScreenState extends State<TimetableScreen> {
                       child: Column(
                         children: [
                           Text(
-                            day['day']!,
+                            _formatDay(date),
                             style: GoogleFonts.lexend(
                               fontSize: 12,
                               fontWeight: FontWeight.w500,
                               color: isSelected
-                                  ? Colors.white.withOpacity(0.8)
+                                  ? Colors.white.withValues(alpha: 0.8)
                                   : subTextColor,
                             ),
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            day['date']!,
+                            _formatDate(date),
                             style: GoogleFonts.lexend(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
@@ -314,7 +511,7 @@ class _TimetableScreenState extends State<TimetableScreen> {
         border: Border.all(color: borderColor),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: Colors.black.withValues(alpha: 0.02),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -355,7 +552,7 @@ class _TimetableScreenState extends State<TimetableScreen> {
                         ),
                         decoration: BoxDecoration(
                           color: isDarkMode
-                              ? Colors.white.withOpacity(0.05)
+                              ? Colors.white.withValues(alpha: 0.05)
                               : const Color(0xfff1f5f9),
                           borderRadius: BorderRadius.circular(4),
                         ),
@@ -409,7 +606,7 @@ class _TimetableScreenState extends State<TimetableScreen> {
         border: Border.all(color: primaryColor, width: 2),
         boxShadow: [
           BoxShadow(
-            color: primaryColor.withOpacity(0.1),
+            color: primaryColor.withValues(alpha: 0.1),
             blurRadius: 12,
             offset: const Offset(0, 6),
           ),
@@ -463,7 +660,7 @@ class _TimetableScreenState extends State<TimetableScreen> {
                 timeEnd,
                 primaryColor,
                 subTextColor,
-                primaryColor.withOpacity(0.3),
+                primaryColor.withValues(alpha: 0.3),
                 isDarkMode,
                 isLive: true,
               ),
@@ -520,7 +717,7 @@ class _TimetableScreenState extends State<TimetableScreen> {
                             style: GoogleFonts.lexend(
                               fontSize: 10,
                               fontWeight: FontWeight.w500,
-                              color: primaryColor.withOpacity(0.7),
+                              color: primaryColor.withValues(alpha: 0.7),
                             ),
                           ),
                           Text(
@@ -528,7 +725,7 @@ class _TimetableScreenState extends State<TimetableScreen> {
                             style: GoogleFonts.lexend(
                               fontSize: 10,
                               fontWeight: FontWeight.w500,
-                              color: primaryColor.withOpacity(0.7),
+                              color: primaryColor.withValues(alpha: 0.7),
                             ),
                           ),
                         ],
@@ -591,133 +788,6 @@ class _TimetableScreenState extends State<TimetableScreen> {
           style: GoogleFonts.lexend(fontSize: 12, color: subTextColor),
         ),
       ],
-    );
-  }
-
-  Widget _buildBreakSeparator(bool isDarkMode, Color borderColor) {
-    return Row(
-      children: [
-        Expanded(child: Divider(color: borderColor)),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Row(
-            children: [
-              Icon(
-                Icons.restaurant_rounded,
-                size: 16,
-                color: (isDarkMode ? Colors.white30 : Colors.black26),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'LUNCH BREAK',
-                style: GoogleFonts.lexend(
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 2,
-                  color: (isDarkMode ? Colors.white30 : Colors.black26),
-                ),
-              ),
-            ],
-          ),
-        ),
-        Expanded(child: Divider(color: borderColor)),
-      ],
-    );
-  }
-
-  Widget _buildBottomNav(
-    Color surfaceColor,
-    Color subTextColor,
-    bool isDarkMode,
-  ) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
-      decoration: BoxDecoration(
-        color: surfaceColor.withOpacity(0.95),
-        border: Border(
-          top: BorderSide(
-            color: isDarkMode ? Colors.white10 : const Color(0xffe2e8f0),
-          ),
-        ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          _buildNavItem(Icons.grid_view_rounded, 'Home', 0, subTextColor),
-          _buildNavItem(Icons.schedule_rounded, 'Timetable', 2, subTextColor),
-          _buildNavItem(
-            Icons.local_library_rounded,
-            'Courses',
-            1,
-            subTextColor,
-          ),
-          _buildNavItem(
-            Icons.insert_chart_rounded,
-            'Analytics',
-            3,
-            subTextColor,
-          ),
-          _buildNavItem(
-            Icons.person_outline_rounded,
-            'Profile',
-            4,
-            subTextColor,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildNavItem(
-    IconData icon,
-    String label,
-    int index,
-    Color subTextColor,
-  ) {
-    final bool isSelected = _selectedIndex == index;
-    return GestureDetector(
-      onTap: () {
-        if (index == _selectedIndex) return;
-        if (index == 0) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const StudentDashboard()),
-          );
-        } else if (index == 1) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const EnrolledCoursesScreen(),
-            ),
-          );
-        } else if (index == 3) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const LearningAnalyticsScreen(),
-            ),
-          );
-        }
-      },
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            icon,
-            color: isSelected ? primaryColor : subTextColor.withOpacity(0.6),
-            size: 24,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: GoogleFonts.lexend(
-              fontSize: 10,
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-              color: isSelected ? primaryColor : subTextColor.withOpacity(0.6),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

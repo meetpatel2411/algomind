@@ -89,7 +89,7 @@ class _CourseDetailsScreenState extends State<CourseDetailsScreen> {
     bool isDarkMode,
   ) {
     return SliverAppBar(
-      backgroundColor: surfaceColor.withOpacity(0.8),
+      backgroundColor: surfaceColor.withValues(alpha: 0.8),
       elevation: 0,
       pinned: true,
       centerTitle: true,
@@ -136,7 +136,7 @@ class _CourseDetailsScreenState extends State<CourseDetailsScreen> {
         border: Border.all(color: borderColor),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: Colors.black.withValues(alpha: 0.02),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -154,7 +154,7 @@ class _CourseDetailsScreenState extends State<CourseDetailsScreen> {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: primaryColor.withOpacity(0.1),
+                    color: primaryColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
@@ -306,7 +306,7 @@ class _CourseDetailsScreenState extends State<CourseDetailsScreen> {
             onTap: onToggle,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-              color: surfaceColor.withOpacity(0.5),
+              color: surfaceColor.withValues(alpha: 0.5),
               child: Row(
                 children: [
                   Icon(icon, color: iconColor),
@@ -413,7 +413,7 @@ class _CourseDetailsScreenState extends State<CourseDetailsScreen> {
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           color: isCurrent
-              ? primaryColor.withOpacity(0.05)
+              ? primaryColor.withValues(alpha: 0.05)
               : Colors.transparent,
           border: Border(top: BorderSide(color: borderColor)),
         ),
@@ -424,8 +424,8 @@ class _CourseDetailsScreenState extends State<CourseDetailsScreen> {
               height: 32,
               decoration: BoxDecoration(
                 color: isCompleted
-                    ? successColor.withOpacity(0.1)
-                    : (isCurrent ? primaryColor : Colors.grey.withOpacity(0.1)),
+                    ? successColor.withValues(alpha: 0.1)
+                    : (isCurrent ? primaryColor : Colors.grey.withValues(alpha: 0.1)),
                 shape: BoxShape.circle,
               ),
               child: Icon(
@@ -456,7 +456,7 @@ class _CourseDetailsScreenState extends State<CourseDetailsScreen> {
                     style: GoogleFonts.lexend(
                       fontSize: 11,
                       color: isCurrent
-                          ? primaryColor.withOpacity(0.6)
+                          ? primaryColor.withValues(alpha: 0.6)
                           : subTextColor,
                       letterSpacing: 0.5,
                     ),
@@ -531,7 +531,7 @@ class _CourseDetailsScreenState extends State<CourseDetailsScreen> {
             width: 32,
             height: 32,
             decoration: BoxDecoration(
-              color: iconColor.withOpacity(0.1),
+              color: iconColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(4),
             ),
             child: Icon(icon, size: 16, color: iconColor),
@@ -581,7 +581,7 @@ class _CourseDetailsScreenState extends State<CourseDetailsScreen> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.green.withOpacity(0.1),
+                  color: Colors.green.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
@@ -641,9 +641,9 @@ class _CourseDetailsScreenState extends State<CourseDetailsScreen> {
       margin: const EdgeInsets.all(20),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: primaryColor.withOpacity(0.1),
+        color: primaryColor.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: primaryColor.withOpacity(0.2)),
+        border: Border.all(color: primaryColor.withValues(alpha: 0.2)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -667,7 +667,7 @@ class _CourseDetailsScreenState extends State<CourseDetailsScreen> {
                   "This course is optimized for offline study. Downloaded content will remain available even when you're off the grid.",
                   style: GoogleFonts.lexend(
                     fontSize: 12,
-                    color: primaryColor.withOpacity(0.7),
+                    color: primaryColor.withValues(alpha: 0.7),
                     height: 1.4,
                   ),
                 ),
@@ -693,11 +693,11 @@ class _CourseDetailsScreenState extends State<CourseDetailsScreen> {
             colors: [
               isDarkMode ? backgroundDark : backgroundLight,
               isDarkMode
-                  ? backgroundDark.withOpacity(0.9)
-                  : backgroundLight.withOpacity(0.9),
+                  ? backgroundDark.withValues(alpha: 0.9)
+                  : backgroundLight.withValues(alpha: 0.9),
               isDarkMode
-                  ? backgroundDark.withOpacity(0)
-                  : backgroundLight.withOpacity(0),
+                  ? backgroundDark.withValues(alpha: 0)
+                  : backgroundLight.withValues(alpha: 0),
             ],
           ),
         ),
@@ -711,7 +711,7 @@ class _CourseDetailsScreenState extends State<CourseDetailsScreen> {
               borderRadius: BorderRadius.circular(16),
             ),
             elevation: 8,
-            shadowColor: primaryColor.withOpacity(0.4),
+            shadowColor: primaryColor.withValues(alpha: 0.4),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,

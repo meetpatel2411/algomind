@@ -79,7 +79,7 @@ class _LessonPreviewScreenState extends State<LessonPreviewScreen>
 
   Widget _buildAppBar() {
     return SliverAppBar(
-      backgroundColor: backgroundLight.withOpacity(0.9),
+      backgroundColor: backgroundLight.withValues(alpha: 0.9),
       elevation: 0,
       pinned: true,
       centerTitle: true,
@@ -95,7 +95,7 @@ class _LessonPreviewScreenState extends State<LessonPreviewScreen>
               border: Border.all(color: Colors.grey.shade200),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color: Colors.black.withValues(alpha: 0.05),
                   blurRadius: 4,
                   offset: const Offset(0, 2),
                 ),
@@ -127,7 +127,7 @@ class _LessonPreviewScreenState extends State<LessonPreviewScreen>
                 border: Border.all(color: Colors.grey.shade200),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
+                    color: Colors.black.withValues(alpha: 0.05),
                     blurRadius: 4,
                     offset: const Offset(0, 2),
                   ),
@@ -151,7 +151,7 @@ class _LessonPreviewScreenState extends State<LessonPreviewScreen>
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withValues(alpha: 0.1),
               blurRadius: 20,
               offset: const Offset(0, 10),
             ),
@@ -189,7 +189,7 @@ class _LessonPreviewScreenState extends State<LessonPreviewScreen>
                 ),
               ),
             ),
-            Container(color: Colors.black.withOpacity(0.1)),
+            Container(color: Colors.black.withValues(alpha: 0.1)),
             Positioned(
               top: 16,
               left: 16,
@@ -203,7 +203,7 @@ class _LessonPreviewScreenState extends State<LessonPreviewScreen>
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
-                      color: primaryColor.withOpacity(0.3),
+                      color: primaryColor.withValues(alpha: 0.3),
                       blurRadius: 8,
                       offset: const Offset(0, 4),
                     ),
@@ -246,7 +246,7 @@ class _LessonPreviewScreenState extends State<LessonPreviewScreen>
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: primaryColor.withOpacity(0.4),
+                      color: primaryColor.withValues(alpha: 0.4),
                       blurRadius: 24,
                       offset: const Offset(0, 8),
                     ),
@@ -268,7 +268,7 @@ class _LessonPreviewScreenState extends State<LessonPreviewScreen>
                   vertical: 4,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.7),
+                  color: Colors.black.withValues(alpha: 0.7),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
@@ -371,7 +371,7 @@ class _LessonPreviewScreenState extends State<LessonPreviewScreen>
         border: Border.all(color: Colors.grey.shade200),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: Colors.black.withValues(alpha: 0.02),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -440,7 +440,7 @@ class _LessonPreviewScreenState extends State<LessonPreviewScreen>
                   borderRadius: BorderRadius.circular(16),
                 ),
                 elevation: 10,
-                shadowColor: primaryColor.withOpacity(0.2),
+                shadowColor: primaryColor.withValues(alpha: 0.2),
               ),
             ),
           ),
@@ -458,7 +458,7 @@ class _LessonPreviewScreenState extends State<LessonPreviewScreen>
         border: Border.all(color: Colors.grey.shade200),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: Colors.black.withValues(alpha: 0.02),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -538,7 +538,7 @@ class _LessonPreviewScreenState extends State<LessonPreviewScreen>
           "In this preview, we dive into the fundamental layers of modern neural networks. Explore how weight distribution affects model convergence and why certain architectures are preferred for mobile deployments in offline environments.",
           style: GoogleFonts.beVietnamPro(
             fontSize: 14,
-            color: textMain.withOpacity(0.8),
+            color: textMain.withValues(alpha: 0.8),
             height: 1.6,
           ),
         ),
@@ -644,7 +644,7 @@ class _LessonPreviewScreenState extends State<LessonPreviewScreen>
       child: Container(
         padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.9),
+          color: Colors.white.withValues(alpha: 0.9),
           border: Border(top: BorderSide(color: Colors.grey.shade200)),
         ),
         child: Row(

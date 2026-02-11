@@ -109,7 +109,7 @@ class AttendanceRecordedScreen extends StatelessWidget {
           width: 80,
           height: 80,
           decoration: BoxDecoration(
-            color: primaryColor.withOpacity(0.1),
+            color: primaryColor.withValues(alpha: 0.1),
             shape: BoxShape.circle,
           ),
           child: Icon(
@@ -176,7 +176,7 @@ class AttendanceRecordedScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: surfaceColor.withOpacity(0.5),
+        color: surfaceColor.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: borderColor),
       ),
@@ -221,7 +221,7 @@ class AttendanceRecordedScreen extends StatelessWidget {
       style: GoogleFonts.lexend(
         fontSize: 10,
         fontWeight: FontWeight.bold,
-        color: color.withOpacity(0.6),
+        color: color.withValues(alpha: 0.6),
         letterSpacing: 1.0,
       ),
     );
@@ -279,7 +279,7 @@ class AttendanceRecordedScreen extends StatelessWidget {
         border: Border.all(color: borderColor),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: Colors.black.withValues(alpha: 0.02),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -291,7 +291,7 @@ class AttendanceRecordedScreen extends StatelessWidget {
             width: 32,
             height: 32,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: Icon(
@@ -338,7 +338,7 @@ class AttendanceRecordedScreen extends StatelessWidget {
         border: Border.all(color: borderColor),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: Colors.black.withValues(alpha: 0.02),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -435,7 +435,7 @@ class AttendanceRecordedScreen extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [bgColor.withOpacity(0), bgColor],
+          colors: [bgColor.withValues(alpha: 0), bgColor],
           stops: const [0, 0.4],
         ),
       ),
@@ -456,7 +456,7 @@ class AttendanceRecordedScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(16),
                 ),
                 elevation: 8,
-                shadowColor: primaryColor.withOpacity(0.3),
+                shadowColor: primaryColor.withValues(alpha: 0.3),
               ),
               child: Text(
                 'Back to Dashboard',
@@ -472,7 +472,7 @@ class AttendanceRecordedScreen extends StatelessWidget {
             width: 128,
             height: 5,
             decoration: BoxDecoration(
-              color: Colors.grey.withOpacity(0.3),
+              color: Colors.grey.withValues(alpha: 0.3),
               borderRadius: BorderRadius.circular(999),
             ),
           ),

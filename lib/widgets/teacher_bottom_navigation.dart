@@ -10,11 +10,13 @@ import 'connectivity_bottom_bar.dart';
 class TeacherBottomNavigation extends StatelessWidget {
   final int currentIndex;
   final bool isDarkMode;
+  final Function(int)? onTap;
 
   const TeacherBottomNavigation({
     super.key,
     required this.currentIndex,
     required this.isDarkMode,
+    this.onTap,
   });
 
   @override
@@ -29,7 +31,7 @@ class TeacherBottomNavigation extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: surfaceColor.withOpacity(0.95),
+        color: surfaceColor.withValues(alpha: 0.95),
         border: Border(
           top: BorderSide(
             color: isDarkMode ? Colors.white10 : const Color(0xffe2e8f0),
@@ -110,7 +112,7 @@ class TeacherBottomNavigation extends StatelessWidget {
         children: [
           Icon(
             icon,
-            color: isSelected ? primaryColor : subTextColor.withOpacity(0.6),
+            color: isSelected ? primaryColor : subTextColor.withValues(alpha: 0.6),
             size: 24,
           ),
           const SizedBox(height: 4),
@@ -119,7 +121,7 @@ class TeacherBottomNavigation extends StatelessWidget {
             style: GoogleFonts.lexend(
               fontSize: 10,
               fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-              color: isSelected ? primaryColor : subTextColor.withOpacity(0.6),
+              color: isSelected ? primaryColor : subTextColor.withValues(alpha: 0.6),
             ),
           ),
         ],
@@ -128,6 +130,10 @@ class TeacherBottomNavigation extends StatelessWidget {
   }
 
   void _handleNavigation(BuildContext context, int index) {
+    if (onTap != null) {
+      onTap!(index);
+      return;
+    }
     if (index == currentIndex) return;
 
     // Helper to push and replace to avoid building a huge stack

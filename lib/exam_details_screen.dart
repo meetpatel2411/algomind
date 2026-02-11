@@ -120,7 +120,7 @@ class _ExamDetailsScreenState extends State<ExamDetailsScreen> {
             style: GoogleFonts.lexend(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: subTextColor.withOpacity(0.5),
+              color: subTextColor.withValues(alpha: 0.5),
             ),
           ),
         ],
@@ -172,7 +172,7 @@ class _ExamDetailsScreenState extends State<ExamDetailsScreen> {
                       width: 4,
                       height: 4,
                       decoration: BoxDecoration(
-                        color: subTextColor.withOpacity(0.3),
+                        color: subTextColor.withValues(alpha: 0.3),
                         shape: BoxShape.circle,
                       ),
                     ),
@@ -193,7 +193,7 @@ class _ExamDetailsScreenState extends State<ExamDetailsScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             decoration: BoxDecoration(
-              color: primaryColor.withOpacity(0.1),
+              color: primaryColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
@@ -258,7 +258,7 @@ class _ExamDetailsScreenState extends State<ExamDetailsScreen> {
         border: Border.all(color: borderColor),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: Colors.black.withValues(alpha: 0.02),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -304,7 +304,7 @@ class _ExamDetailsScreenState extends State<ExamDetailsScreen> {
         border: Border.all(color: borderColor),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: Colors.black.withValues(alpha: 0.02),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -341,7 +341,7 @@ class _ExamDetailsScreenState extends State<ExamDetailsScreen> {
                   style: GoogleFonts.lexend(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
-                    color: subTextColor.withOpacity(0.5),
+                    color: subTextColor.withValues(alpha: 0.5),
                   ),
                 ),
               ),
@@ -423,7 +423,7 @@ class _ExamDetailsScreenState extends State<ExamDetailsScreen> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         border: borderColor != null
-            ? Border(bottom: BorderSide(color: borderColor.withOpacity(0.5)))
+            ? Border(bottom: BorderSide(color: borderColor.withValues(alpha: 0.5)))
             : null,
       ),
       child: Row(
@@ -432,7 +432,7 @@ class _ExamDetailsScreenState extends State<ExamDetailsScreen> {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: primaryColor.withOpacity(0.1),
+              color: primaryColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(icon, color: primaryColor, size: 20),
@@ -477,7 +477,7 @@ class _ExamDetailsScreenState extends State<ExamDetailsScreen> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: primaryColor.withOpacity(0.2),
+            color: primaryColor.withValues(alpha: 0.2),
             blurRadius: 15,
             offset: const Offset(0, 8),
           ),
@@ -502,7 +502,7 @@ class _ExamDetailsScreenState extends State<ExamDetailsScreen> {
                   'Mathematics_Midterm_G10A.pdf',
                   style: GoogleFonts.lexend(
                     fontSize: 12,
-                    color: Colors.white.withOpacity(0.7),
+                    color: Colors.white.withValues(alpha: 0.7),
                   ),
                 ),
               ],
@@ -511,7 +511,7 @@ class _ExamDetailsScreenState extends State<ExamDetailsScreen> {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
+              color: Colors.white.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(10),
             ),
             child: const Icon(
@@ -529,9 +529,9 @@ class _ExamDetailsScreenState extends State<ExamDetailsScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: primaryColor.withOpacity(0.05),
+        color: primaryColor.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: primaryColor.withOpacity(0.1)),
+        border: Border.all(color: primaryColor.withValues(alpha: 0.1)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -564,7 +564,7 @@ class _ExamDetailsScreenState extends State<ExamDetailsScreen> {
         gradient: LinearGradient(
           begin: Alignment.bottomCenter,
           end: Alignment.topCenter,
-          colors: [bgColor, bgColor.withOpacity(0.95), bgColor.withOpacity(0)],
+          colors: [bgColor, bgColor.withValues(alpha: 0.95), bgColor.withValues(alpha: 0)],
         ),
       ),
       child: Column(

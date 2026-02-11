@@ -353,10 +353,10 @@ class _SubjectSelectionScreenState extends State<SubjectSelectionScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: const Color(0xff10b981).withOpacity(0.1),
+              color: const Color(0xff10b981).withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
-                color: const Color(0xff10b981).withOpacity(0.2),
+                color: const Color(0xff10b981).withValues(alpha: 0.2),
               ),
             ),
             child: Row(
@@ -422,7 +422,7 @@ class _SubjectSelectionScreenState extends State<SubjectSelectionScreen> {
           border: Border.all(color: borderColor),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.02),
+              color: Colors.black.withValues(alpha: 0.02),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -440,7 +440,7 @@ class _SubjectSelectionScreenState extends State<SubjectSelectionScreen> {
                       width: 56,
                       height: 56,
                       decoration: BoxDecoration(
-                        color: color.withOpacity(0.1),
+                        color: color.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: Icon(icon, color: color, size: 30),
@@ -480,7 +480,7 @@ class _SubjectSelectionScreenState extends State<SubjectSelectionScreen> {
                         style: GoogleFonts.lexend(
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
-                          color: subTextColor.withOpacity(0.6),
+                          color: subTextColor.withValues(alpha: 0.6),
                           letterSpacing: 0.5,
                         ),
                       ),
@@ -532,7 +532,7 @@ class _SubjectSelectionScreenState extends State<SubjectSelectionScreen> {
     return Container(
       padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
       decoration: BoxDecoration(
-        color: surfaceColor.withOpacity(0.95),
+        color: surfaceColor.withValues(alpha: 0.95),
         border: Border(
           top: BorderSide(
             color: isDarkMode ? Colors.white10 : const Color(0xffe2e8f0),
@@ -586,7 +586,7 @@ class _SubjectSelectionScreenState extends State<SubjectSelectionScreen> {
         children: [
           Icon(
             icon,
-            color: isSelected ? primaryColor : subTextColor.withOpacity(0.6),
+            color: isSelected ? primaryColor : subTextColor.withValues(alpha: 0.6),
             size: 24,
           ),
           const SizedBox(height: 4),
@@ -595,7 +595,7 @@ class _SubjectSelectionScreenState extends State<SubjectSelectionScreen> {
             style: GoogleFonts.lexend(
               fontSize: 10,
               fontWeight: FontWeight.bold,
-              color: isSelected ? primaryColor : subTextColor.withOpacity(0.6),
+              color: isSelected ? primaryColor : subTextColor.withValues(alpha: 0.6),
             ),
           ),
         ],

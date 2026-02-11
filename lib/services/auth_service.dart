@@ -129,4 +129,8 @@ class AuthService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_storageKey);
   }
+
+  Future<void> logout() async {
+    await _auth.signOut();
+  }
 }

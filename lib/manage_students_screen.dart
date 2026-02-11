@@ -70,8 +70,9 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
                                     _selectedClassId!,
                                   ),
                             builder: (context, snapshot) {
-                              if (snapshot.hasError)
+                              if (snapshot.hasError) {
                                 return Text('Error: ${snapshot.error}');
+                              }
                               if (snapshot.connectionState ==
                                   ConnectionState.waiting) {
                                 return const Center(
@@ -291,20 +292,22 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
                 try {
                   if (student == null) {
                     await DatabaseService().addStudent(data);
-                    if (mounted) {
+                    if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('Student Added')),
                       );
                     }
                   } else {
                     await DatabaseService().updateStudent(uid!, data);
-                    if (mounted) {
+                    if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('Student Updated')),
                       );
                     }
                   }
-                  if (mounted) Navigator.pop(context);
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                  }
                 } catch (e) {
                   if (mounted) {
                     ScaffoldMessenger.of(
@@ -343,15 +346,17 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
     if (confirm == true) {
       try {
         await DatabaseService().deleteStudent(uid);
-        if (mounted)
+        if (context.mounted) {
           ScaffoldMessenger.of(
             context,
           ).showSnackBar(const SnackBar(content: Text('Student Deleted')));
+        }
       } catch (e) {
-        if (mounted)
+        if (context.mounted) {
           ScaffoldMessenger.of(
             context,
           ).showSnackBar(SnackBar(content: Text('Error: $e')));
+        }
       }
     }
   }
@@ -384,7 +389,7 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
+              color: Colors.black.withValues(alpha: 0.04),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -399,10 +404,12 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
           },
           decoration: InputDecoration(
             hintText: 'Search by name, class or section...',
-            hintStyle: GoogleFonts.lexend(color: subTextColor.withOpacity(0.6)),
+            hintStyle: GoogleFonts.lexend(
+              color: subTextColor.withValues(alpha: 0.6),
+            ),
             prefixIcon: Icon(
               Icons.search_rounded,
-              color: subTextColor.withOpacity(0.6),
+              color: subTextColor.withValues(alpha: 0.6),
             ),
             border: InputBorder.none,
             contentPadding: const EdgeInsets.symmetric(vertical: 16),
@@ -436,7 +443,7 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
             decoration: BoxDecoration(
               color: surfaceColor,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: textColor.withOpacity(0.1)),
+              border: Border.all(color: textColor.withValues(alpha: 0.1)),
             ),
             child: DropdownButtonHideUnderline(
               child: DropdownButton<String>(
@@ -518,7 +525,7 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
           border: Border.all(color: borderColor),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.02),
+              color: Colors.black.withValues(alpha: 0.02),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -529,7 +536,7 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
             ProfileImage(
               imageUrl: imageUrl,
               size: 48,
-              borderColor: primaryColor.withOpacity(0.2),
+              borderColor: primaryColor.withValues(alpha: 0.2),
               borderWidth: 1,
             ),
             const SizedBox(width: 16),
@@ -561,13 +568,13 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
                 IconButton(
                   onPressed: onEdit,
                   icon: const Icon(Icons.edit_rounded, size: 20),
-                  color: subTextColor.withOpacity(0.6),
+                  color: subTextColor.withValues(alpha: 0.6),
                   splashRadius: 20,
                 ),
                 IconButton(
                   onPressed: onDelete,
                   icon: const Icon(Icons.delete_outline_rounded, size: 20),
-                  color: Colors.redAccent.withOpacity(0.6),
+                  color: Colors.redAccent.withValues(alpha: 0.6),
                   splashRadius: 20,
                 ),
               ],

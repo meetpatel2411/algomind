@@ -173,10 +173,10 @@ class _AttendanceScreenState extends State<AttendanceScreen>
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: primaryColor.withOpacity(0.1),
+              color: primaryColor.withValues(alpha: 0.1),
               shape: BoxShape.circle,
               border: Border.all(
-                color: primaryColor.withOpacity(0.2),
+                color: primaryColor.withValues(alpha: 0.2),
                 width: 2,
               ),
             ),
@@ -207,7 +207,7 @@ class _AttendanceScreenState extends State<AttendanceScreen>
         border: Border.all(color: borderColor),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: Colors.black.withValues(alpha: 0.02),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -240,7 +240,7 @@ class _AttendanceScreenState extends State<AttendanceScreen>
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: successColor.withOpacity(0.1),
+                  color: successColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Row(
@@ -345,7 +345,7 @@ class _AttendanceScreenState extends State<AttendanceScreen>
     // In a real app, we'd query classes scheduled for this day
     return StreamBuilder(
       stream: _db.getTeacherClasses(
-        'teacher1',
+        FirebaseAuth.instance.currentUser?.uid ?? '',
       ), // Assuming auth not fully hooked up with ID yet
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
@@ -436,7 +436,7 @@ class _AttendanceScreenState extends State<AttendanceScreen>
                           vertical: 6,
                         ),
                         decoration: BoxDecoration(
-                          color: primaryColor.withOpacity(0.1),
+                          color: primaryColor.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
@@ -573,7 +573,7 @@ class _AttendanceScreenState extends State<AttendanceScreen>
                 Icon(
                   Icons.history,
                   size: 64,
-                  color: subTextColor.withOpacity(0.5),
+                  color: subTextColor.withValues(alpha: 0.5),
                 ),
                 const SizedBox(height: 16),
                 Text(
@@ -647,7 +647,7 @@ class _AttendanceScreenState extends State<AttendanceScreen>
                               vertical: 6,
                             ),
                             decoration: BoxDecoration(
-                              color: primaryColor.withOpacity(0.1),
+                              color: primaryColor.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(

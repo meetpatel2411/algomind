@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+
+import 'services/database_service.dart';
 import 'dart:math' as math;
 import 'teacher_dashboard.dart';
 import 'manage_students_screen.dart';
@@ -18,51 +20,167 @@ class _ExamResultsScreenState extends State<ExamResultsScreen> {
   final Color backgroundLight = const Color(0xfff6f7f8);
   final Color backgroundDark = const Color(0xff101722);
   final Color successColor = const Color(0xff10b981);
-  final Color failureColor = const Color(0xfff43f5e);
+  final Color failureColor = const Color(0xffef4444);
+  final Color warningColor = const Color(0xfff59e0b);
 
   int _selectedNavItem = 1;
+  bool _isLoading = true;
+  bool _isSaving = false;
+  List<Map<String, dynamic>> _students = [];
+  Map<String, TextEditingController> _scoreControllers = {};
+  Map<String, String> _statuses = {}; // 'Pass', 'Fail', 'Absent'
 
-  final List<Map<String, dynamic>> _students = [
-    {
-      'name': 'Benjamin Carter',
-      'id': 'RM-2024-041',
-      'score': '92/100',
-      'status': 'Pass',
-      'image':
-          'https://lh3.googleusercontent.com/aida-public/AB6AXuAMClegwmL9_ASZyQKAcBzfnZUwEKpXFs5vO67HcQ_K7vriSu2oDhAdpdSDdI5IpHlmXVYpsA2uMoxspDDgsIAftH-HammUaQgUAnribLl9ulQLfG-FcU_Hnup8Fn76MTSun8TSdYLmZEKnnL5bv_al9uNtM9gk8DWGJGMTcacj_G3CJv5WsnCQcPxSrGAy9w58hT7Pw8OWjcrnaeiQ396Zw-NaLpsj1XVseSIKtETULUE40O_r6C5rWZ0W9O5cufD1enaG-YuTyd8',
-    },
-    {
-      'name': 'Amelia Watson',
-      'id': 'RM-2024-018',
-      'score': '85/100',
-      'status': 'Pass',
-      'image':
-          'https://lh3.googleusercontent.com/aida-public/AB6AXuAqwLeUs4dC8TmQ-vUQh39vRzRtTHOmd0xY9WnHPDLqBAcKtaULvuJu9TfydKO3deNuUT2XektJU6X1YPLyrxIobD9HsPGuMuVQ7EIW9xeD54pJRdxk3gzgPP35UYZT2HyhZ3SF6GM1oR6BSmNjDBH9zT8JQI3mudlOLhRBpoe3-ceS-DMlI3b1qvJ-FT5fVIIol0kZqbGgB9E0bY8bahWNKpsV5NkhIiHX80YBhsNLkOegDOUOmjetOFjJgfyXcakZExGjMr9bQJ0',
-    },
-    {
-      'name': 'David Nguyen',
-      'id': 'RM-2024-092',
-      'score': '34/100',
-      'status': 'Fail',
-      'image':
-          'https://lh3.googleusercontent.com/aida-public/AB6AXuDI3mUwdlbNXHGgq6074xSw4LmLjhSHAkNo3KDiuHBaGI_n70yK14wqQ7NKAhByx3JAr0ZdGBo4ukXaDP5pNrXYOUH83l-fTe7QJXujBue-ZBk9MGG3zPkK6A9TgO6-6VtKwIrl965QBGRDJms2W4YSwZpI66NfKnLD4pdRNTBRDf7azW8AVxc2qznfyhNS3JMwknI0eQIvEaTdJWf8DU6v7_xxTUq5UeOL9jrHu-XMa0_SxanB0A8Yz-_T2QfYQ-HhcajV7IuGJkU',
-    },
-    {
-      'name': 'Sarah Jenkins',
-      'id': 'RM-2024-055',
-      'score': '78/100',
-      'status': 'Pass',
-      'image':
-          'https://lh3.googleusercontent.com/aida-public/AB6AXuCblCObSpmyQBovIqEFR5B_tw6r_mz6WskM7psXPwi9kQIFM7u2hYna5NAR8OxTwlkSFwORqcgOx9avv3ewFdquqc2VFB6ARoUAndnbOYoJC2-QvMlJNNq2dqoUurmlTxKRswM0c8A2DFJvjqjuxGPaoYOV0jQ34ADOCDLP6OVnFEro715K1uyuRsSJhBEXKJzi1LdlvQCq4wG-fWqc1e8OGEPYjIllWhFUtSpJHcYSIJxg_sY8aQsBpooAfmAZhKJrMUN67IJWpDg',
-    },
-    {
-      'name': 'Marcus King',
-      'id': 'RM-2024-112',
-      'score': '28/100',
-      'status': 'Fail',
-      'image': '',
-    },
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _fetchData();
+  }
+
+  @override
+  void dispose() {
+    for (var controller in _scoreControllers.values) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  Future<void> _fetchData() async {
+    setState(() => _isLoading = true);
+    try {
+      final classId = widget.examData['classId'];
+      final examId = widget.examData['id'];
+
+      if (classId == null || examId == null) {
+        setState(() => _isLoading = false);
+        return;
+      }
+
+      // 1. Fetch Students
+      final studentsSnapshot = await DatabaseService()
+          .getStudentsByClass(classId)
+          .first;
+      final students = studentsSnapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        return {
+          'id': doc.id,
+          'name': data['name'] ?? 'Unknown',
+          'rollNo': data['rollNo'] ?? 'N/A',
+          'image': data['profileImage'],
+        };
+      }).toList();
+
+      // 2. Fetch Existing Submissions
+      final submissionsSnapshot = await DatabaseService()
+          .getExamResults(examId)
+          .first;
+      final submissions = {
+        for (var doc in submissionsSnapshot.docs)
+          doc.id: doc.data() as Map<String, dynamic>,
+      };
+
+      // 3. Merge Data
+      _students = students;
+      for (var student in _students) {
+        final String uid = student['id'];
+        final submission = submissions[uid];
+
+        final score = submission != null
+            ? submission['marksObtained'].toString()
+            : '';
+        final status = submission != null ? submission['status'] : 'Pass';
+
+        _scoreControllers[uid] = TextEditingController(text: score);
+        _statuses[uid] = status;
+      }
+    } catch (e) {
+      debugPrint('Error fetching results: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _saveResults() async {
+    setState(() => _isSaving = true);
+    try {
+      final examId = widget.examData['id'];
+      final List<Map<String, dynamic>> results = [];
+
+      for (var student in _students) {
+        final uid = student['id'];
+        final scoreText = _scoreControllers[uid]?.text.trim();
+
+        if (scoreText != null && scoreText.isNotEmpty) {
+          final double score = double.tryParse(scoreText) ?? 0;
+          results.add({
+            'studentId': uid,
+            'studentName': student['name'],
+            'marksObtained': score,
+            'status': _statuses[uid] ?? 'Pass',
+            // Metadata for Analytics
+            'examTitle': widget.examData['title'] ?? 'Exam',
+            'subjectName': widget.examData['subjectName'] ?? 'General',
+            'totalMarks': widget.examData['totalMarks'] ?? 100,
+            'examDate': widget.examData['date'],
+          });
+        }
+      }
+
+      if (results.isNotEmpty) {
+        await DatabaseService().submitExamResults(examId, results);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Results saved successfully!')),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error saving results: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  Map<String, dynamic> _calculateStats() {
+    int totalStudents = _students.length;
+    double totalScore = 0;
+    int gradedCount = 0;
+    int passedCount = 0;
+    int failedCount = 0;
+
+    for (var student in _students) {
+      final uid = student['id'];
+      final scoreText = _scoreControllers[uid]?.text.trim();
+      if (scoreText != null && scoreText.isNotEmpty) {
+        double score = double.tryParse(scoreText) ?? 0;
+        totalScore += score;
+        gradedCount++;
+
+        if (_statuses[uid] == 'Pass') {
+          passedCount++;
+        } else if (_statuses[uid] == 'Fail') {
+          failedCount++;
+        }
+      }
+    }
+
+    double avg = gradedCount > 0 ? totalScore / gradedCount : 0;
+    int maxMarks = widget.examData['totalMarks'] ?? 100;
+    double percentage = maxMarks > 0 ? (avg / maxMarks) * 100 : 0;
+
+    return {
+      'average': percentage.toStringAsFixed(1),
+      'graded': gradedCount,
+      'total': totalStudents,
+      'passed': passedCount,
+      'failed': failedCount,
+    };
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -79,8 +197,28 @@ class _ExamResultsScreenState extends State<ExamResultsScreen> {
         ? const Color(0xff334155)
         : const Color(0xffe2e8f0);
 
+    final stats = _calculateStats();
+
     return Scaffold(
       backgroundColor: bgColor,
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _isSaving ? null : _saveResults,
+        backgroundColor: primaryColor,
+        icon: _isSaving
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 2,
+                ),
+              )
+            : const Icon(Icons.save_rounded, color: Colors.white),
+        label: Text(
+          _isSaving ? 'Saving...' : 'Save Results',
+          style: GoogleFonts.lexend(color: Colors.white),
+        ),
+      ),
       body: SafeArea(
         child: Stack(
           children: [
@@ -89,34 +227,37 @@ class _ExamResultsScreenState extends State<ExamResultsScreen> {
                 _buildSystemStatusBar(isDarkMode, subTextColor),
                 _buildHeader(isDarkMode, textColor, subTextColor),
                 Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const SizedBox(height: 20),
-                        _buildSummaryCard(textColor),
-                        const SizedBox(height: 24),
-                        _buildStatsGrid(
-                          surfaceColor,
-                          borderColor,
-                          subTextColor,
-                          textColor,
+                  child: _isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : SingleChildScrollView(
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const SizedBox(height: 20),
+                              _buildSummaryCard(textColor, stats),
+                              const SizedBox(height: 24),
+                              _buildStatsGrid(
+                                surfaceColor,
+                                borderColor,
+                                subTextColor,
+                                textColor,
+                                stats,
+                              ),
+                              const SizedBox(height: 24),
+                              _buildStudentListHeader(textColor, subTextColor),
+                              const SizedBox(height: 12),
+                              _buildStudentList(
+                                surfaceColor,
+                                borderColor,
+                                textColor,
+                                subTextColor,
+                                isDarkMode,
+                              ),
+                              const SizedBox(height: 120),
+                            ],
+                          ),
                         ),
-                        const SizedBox(height: 24),
-                        _buildStudentListHeader(textColor, subTextColor),
-                        const SizedBox(height: 12),
-                        _buildStudentList(
-                          surfaceColor,
-                          borderColor,
-                          textColor,
-                          subTextColor,
-                          isDarkMode,
-                        ),
-                        const SizedBox(height: 120),
-                      ],
-                    ),
-                  ),
                 ),
               ],
             ),
@@ -220,7 +361,7 @@ class _ExamResultsScreenState extends State<ExamResultsScreen> {
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: primaryColor.withOpacity(0.1),
+                  color: primaryColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
@@ -248,11 +389,13 @@ class _ExamResultsScreenState extends State<ExamResultsScreen> {
           const SizedBox(height: 20),
           Container(
             decoration: BoxDecoration(
-              color: isDarkMode ? Colors.white.withOpacity(0.05) : Colors.white,
+              color: isDarkMode
+                  ? Colors.white.withValues(alpha: 0.05)
+                  : Colors.white,
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color: Colors.black.withValues(alpha: 0.05),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 ),
@@ -263,11 +406,11 @@ class _ExamResultsScreenState extends State<ExamResultsScreen> {
               decoration: InputDecoration(
                 hintText: 'Search student name or ID...',
                 hintStyle: GoogleFonts.lexend(
-                  color: subTextColor.withOpacity(0.5),
+                  color: subTextColor.withValues(alpha: 0.5),
                 ),
                 prefixIcon: Icon(
                   Icons.search_rounded,
-                  color: subTextColor.withOpacity(0.5),
+                  color: subTextColor.withValues(alpha: 0.5),
                 ),
                 suffixIcon: Icon(Icons.tune_rounded, color: primaryColor),
                 border: InputBorder.none,
@@ -280,7 +423,7 @@ class _ExamResultsScreenState extends State<ExamResultsScreen> {
     );
   }
 
-  Widget _buildSummaryCard(Color textColor) {
+  Widget _buildSummaryCard(Color textColor, Map<String, dynamic> stats) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
@@ -289,7 +432,7 @@ class _ExamResultsScreenState extends State<ExamResultsScreen> {
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: primaryColor.withOpacity(0.3),
+            color: primaryColor.withValues(alpha: 0.3),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -304,7 +447,7 @@ class _ExamResultsScreenState extends State<ExamResultsScreen> {
               width: 100,
               height: 100,
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.1),
+                color: Colors.white.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
             ),
@@ -320,13 +463,13 @@ class _ExamResultsScreenState extends State<ExamResultsScreen> {
                     style: GoogleFonts.lexend(
                       fontSize: 10,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white.withOpacity(0.8),
+                      color: Colors.white.withValues(alpha: 0.8),
                       letterSpacing: 1.5,
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    '78.4%',
+                    '${stats['average']}%',
                     style: GoogleFonts.lexend(
                       fontSize: 40,
                       fontWeight: FontWeight.bold,
@@ -334,23 +477,13 @@ class _ExamResultsScreenState extends State<ExamResultsScreen> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.trending_up_rounded,
-                        color: Colors.white.withOpacity(0.7),
-                        size: 14,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '+2.4% from Midterms',
-                        style: GoogleFonts.lexend(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.white.withOpacity(0.7),
-                        ),
-                      ),
-                    ],
+                  Text(
+                    'Average Score',
+                    style: GoogleFonts.lexend(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.white.withValues(alpha: 0.7),
+                    ),
                   ),
                 ],
               ),
@@ -362,9 +495,10 @@ class _ExamResultsScreenState extends State<ExamResultsScreen> {
                     height: 80,
                     child: CustomPaint(
                       painter: RingPainter(
-                        progress: 0.784,
+                        progress:
+                            double.tryParse(stats['average'].toString())! / 100,
                         color: Colors.white,
-                        bgColor: Colors.white.withOpacity(0.2),
+                        bgColor: Colors.white.withValues(alpha: 0.2),
                       ),
                     ),
                   ),
@@ -387,14 +521,15 @@ class _ExamResultsScreenState extends State<ExamResultsScreen> {
     Color borderColor,
     Color subTextColor,
     Color textColor,
+    Map<String, dynamic> stats,
   ) {
     return Row(
       children: [
         Expanded(
           child: _buildStatCard(
             'TOTAL PASSED',
-            '26',
-            '/ 30',
+            '${stats['passed']}',
+            '/ ${stats['graded']}',
             successColor,
             surfaceColor,
             borderColor,
@@ -405,8 +540,8 @@ class _ExamResultsScreenState extends State<ExamResultsScreen> {
         Expanded(
           child: _buildStatCard(
             'FAILURES',
-            '04',
-            '/ 30',
+            '${stats['failed']}',
+            '/ ${stats['graded']}',
             failureColor,
             surfaceColor,
             borderColor,
@@ -465,7 +600,7 @@ class _ExamResultsScreenState extends State<ExamResultsScreen> {
                   style: GoogleFonts.lexend(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
-                    color: subTextColor.withOpacity(0.5),
+                    color: subTextColor.withValues(alpha: 0.5),
                   ),
                 ),
               ),
@@ -493,7 +628,7 @@ class _ExamResultsScreenState extends State<ExamResultsScreen> {
           style: GoogleFonts.lexend(
             fontSize: 10,
             fontWeight: FontWeight.bold,
-            color: subTextColor.withOpacity(0.5),
+            color: subTextColor.withValues(alpha: 0.5),
             letterSpacing: 0.5,
           ),
         ),
@@ -535,7 +670,9 @@ class _ExamResultsScreenState extends State<ExamResultsScreen> {
     Color subTextColor,
     bool isDarkMode,
   ) {
-    final bool isPass = student['status'] == 'Pass';
+    final uid = student['id'];
+    final status = _statuses[uid] ?? 'Pass';
+    final isPass = status == 'Pass';
     final Color statusColor = isPass ? successColor : failureColor;
 
     return Container(
@@ -555,7 +692,7 @@ class _ExamResultsScreenState extends State<ExamResultsScreen> {
               borderRadius: BorderRadius.circular(10),
             ),
             alignment: Alignment.center,
-            child: student['image'] != ''
+            child: student['image'] != null && student['image'] != ''
                 ? ProfileImage(
                     imageUrl: student['image'],
                     size: 44,
@@ -563,7 +700,11 @@ class _ExamResultsScreenState extends State<ExamResultsScreen> {
                     borderWidth: 0,
                   )
                 : Text(
-                    student['name'].split(' ').map((e) => e[0]).join(''),
+                    (student['name'] ?? 'Unknown')
+                        .split(' ')
+                        .map((e) => e[0])
+                        .take(2)
+                        .join(''),
                     style: GoogleFonts.lexend(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
@@ -577,7 +718,7 @@ class _ExamResultsScreenState extends State<ExamResultsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  student['name'],
+                  student['name'] ?? 'Unknown',
                   style: GoogleFonts.lexend(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
@@ -588,7 +729,7 @@ class _ExamResultsScreenState extends State<ExamResultsScreen> {
                   'ID: ${student['id']}',
                   style: GoogleFonts.lexend(
                     fontSize: 10,
-                    color: subTextColor.withOpacity(0.6),
+                    color: subTextColor.withValues(alpha: 0.6),
                     letterSpacing: 0.5,
                   ),
                 ),
@@ -597,46 +738,59 @@ class _ExamResultsScreenState extends State<ExamResultsScreen> {
           ),
           Row(
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    student['score'],
-                    style: GoogleFonts.lexend(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: textColor,
+              SizedBox(
+                width: 60,
+                child: TextField(
+                  controller: _scoreControllers[uid],
+                  keyboardType: TextInputType.number,
+                  textAlign: TextAlign.end,
+                  decoration: InputDecoration(
+                    hintText: '0',
+                    border: InputBorder.none,
+                    hintStyle: GoogleFonts.lexend(
+                      color: subTextColor.withValues(alpha: 0.5),
                     ),
                   ),
-                  Row(
-                    children: [
-                      Container(
-                        width: 6,
-                        height: 6,
-                        decoration: BoxDecoration(
-                          color: statusColor,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        student['status'].toUpperCase(),
-                        style: GoogleFonts.lexend(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          color: statusColor,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                    ],
+                  style: GoogleFonts.lexend(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: textColor,
                   ),
-                ],
+                  onChanged: (val) {
+                    setState(() {}); // Refresh stats
+                  },
+                ),
               ),
               const SizedBox(width: 8),
-              Icon(
-                Icons.chevron_right_rounded,
-                color: subTextColor.withOpacity(0.3),
-                size: 18,
+              // Status Toggle
+              GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _statuses[uid] = status == 'Pass' ? 'Fail' : 'Pass';
+                  });
+                },
+                child: Row(
+                  children: [
+                    Container(
+                      width: 6,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        color: statusColor,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      status.toUpperCase(),
+                      style: GoogleFonts.lexend(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: statusColor,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
@@ -653,7 +807,7 @@ class _ExamResultsScreenState extends State<ExamResultsScreen> {
     return Container(
       padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
       decoration: BoxDecoration(
-        color: surfaceColor.withOpacity(0.95),
+        color: surfaceColor.withValues(alpha: 0.95),
         border: Border(
           top: BorderSide(
             color: isDarkMode ? Colors.white10 : const Color(0xffe2e8f0),
@@ -703,7 +857,9 @@ class _ExamResultsScreenState extends State<ExamResultsScreen> {
         children: [
           Icon(
             icon,
-            color: isSelected ? primaryColor : subTextColor.withOpacity(0.6),
+            color: isSelected
+                ? primaryColor
+                : subTextColor.withValues(alpha: 0.6),
             size: 24,
           ),
           const SizedBox(height: 4),
@@ -712,7 +868,9 @@ class _ExamResultsScreenState extends State<ExamResultsScreen> {
             style: GoogleFonts.lexend(
               fontSize: 10,
               fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-              color: isSelected ? primaryColor : subTextColor.withOpacity(0.6),
+              color: isSelected
+                  ? primaryColor
+                  : subTextColor.withValues(alpha: 0.6),
             ),
           ),
         ],

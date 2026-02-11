@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:math' as math;
+import 'services/database_service.dart';
 import 'widgets/profile_image.dart';
-import 'widgets/teacher_bottom_navigation.dart';
+import 'widgets/student_bottom_navigation.dart';
+import 'settings_screen.dart';
 
 class StudentProfileScreen extends StatefulWidget {
   final Map<String, String> studentData;
@@ -20,8 +24,15 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
 
   int _selectedTabIndex = 0;
 
+  final DatabaseService _db = DatabaseService();
+  final String? _uid = FirebaseAuth.instance.currentUser?.uid;
+
   @override
   Widget build(BuildContext context) {
+    if (_uid == null) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
     final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final Color bgColor = isDarkMode ? backgroundDark : backgroundLight;
     final Color surfaceColor = isDarkMode
@@ -37,63 +48,93 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
 
     return Scaffold(
       backgroundColor: bgColor,
-      body: SafeArea(
-        child: Stack(
-          children: [
-            Column(
+      body: StreamBuilder<DocumentSnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('users')
+            .doc(_uid)
+            .snapshots(),
+        builder: (context, userSnapshot) {
+          if (!userSnapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final userData = userSnapshot.data!.data() as Map<String, dynamic>?;
+          if (userData == null) return const SizedBox();
+
+          // Prepare student data for widgets
+          final Map<String, String> studentData = {
+            'name': userData['fullName'] ?? 'Student',
+            'image': userData['imageUrl'] ?? '',
+            'details':
+                'Class ${userData['className'] ?? ''}-${userData['section'] ?? ''}',
+            'rollNo': userData['rollNumber'] ?? 'N/A',
+          };
+
+          return SafeArea(
+            child: Stack(
               children: [
-                _buildHeader(isDarkMode, textColor, subTextColor),
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const SizedBox(height: 8),
-                        _buildSummaryCard(
-                          surfaceColor,
-                          borderColor,
-                          textColor,
-                          subTextColor,
+                Column(
+                  children: [
+                    _buildHeader(isDarkMode, textColor, subTextColor),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: 8),
+                            _buildSummaryCard(
+                              studentData,
+                              surfaceColor,
+                              borderColor,
+                              textColor,
+                              subTextColor,
+                            ),
+                            const SizedBox(height: 24),
+                            _buildMetricsGrid(
+                              _uid,
+                              surfaceColor,
+                              borderColor,
+                              textColor,
+                              subTextColor,
+                              isDarkMode,
+                            ),
+                            const SizedBox(height: 24),
+                            _buildRecentActivity(
+                              surfaceColor,
+                              borderColor,
+                              textColor,
+                              subTextColor,
+                            ),
+                            const SizedBox(height: 24),
+                            _buildTabbedRecords(
+                              surfaceColor,
+                              borderColor,
+                              textColor,
+                              subTextColor,
+                              isDarkMode,
+                            ),
+                            const SizedBox(height: 120),
+                          ],
                         ),
-                        const SizedBox(height: 24),
-                        _buildMetricsGrid(
-                          surfaceColor,
-                          borderColor,
-                          textColor,
-                          subTextColor,
-                          isDarkMode,
-                        ),
-                        const SizedBox(height: 24),
-                        _buildRecentActivity(
-                          surfaceColor,
-                          borderColor,
-                          textColor,
-                          subTextColor,
-                        ),
-                        const SizedBox(height: 24),
-                        _buildTabbedRecords(
-                          surfaceColor,
-                          borderColor,
-                          textColor,
-                          subTextColor,
-                          isDarkMode,
-                        ),
-                        const SizedBox(height: 120),
-                      ],
+                      ),
                     ),
+                  ],
+                ),
+                Positioned(
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  child: _buildBottomNav(
+                    surfaceColor,
+                    subTextColor,
+                    isDarkMode,
                   ),
                 ),
               ],
             ),
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: _buildBottomNav(surfaceColor, subTextColor, isDarkMode),
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
@@ -148,8 +189,15 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                 ],
               ),
               IconButton(
-                onPressed: () {},
-                icon: Icon(Icons.more_horiz_rounded, color: subTextColor),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const SettingsScreen(),
+                    ),
+                  );
+                },
+                icon: Icon(Icons.settings_rounded, color: subTextColor),
               ),
             ],
           ),
@@ -159,6 +207,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
   }
 
   Widget _buildSummaryCard(
+    Map<String, String> data,
     Color surfaceColor,
     Color borderColor,
     Color textColor,
@@ -173,7 +222,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
         border: Border.all(color: borderColor),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: Colors.black.withValues(alpha: 0.02),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -182,14 +231,14 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
       child: Column(
         children: [
           ProfileImage(
-            imageUrl: widget.studentData['image'] ?? '',
+            imageUrl: data['image'] ?? '',
             size: 96,
             borderColor: Colors.white,
             borderWidth: 4,
           ),
           const SizedBox(height: 16),
           Text(
-            widget.studentData['name'] ?? '',
+            data['name'] ?? '',
             style: GoogleFonts.lexend(
               fontSize: 24,
               fontWeight: FontWeight.bold,
@@ -197,7 +246,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
             ),
           ),
           Text(
-            'Student ID: #STU-88291',
+            'Student ID: #${data['rollNo']}',
             style: GoogleFonts.lexend(
               fontSize: 14,
               fontWeight: FontWeight.w500,
@@ -208,11 +257,11 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: primaryColor.withOpacity(0.1),
+              color: primaryColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
-              widget.studentData['details'] ?? '',
+              data['details'] ?? '',
               style: GoogleFonts.lexend(
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
@@ -227,108 +276,149 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
   }
 
   Widget _buildMetricsGrid(
+    String uid,
     Color surfaceColor,
     Color borderColor,
     Color textColor,
     Color subTextColor,
     bool isDarkMode,
   ) {
-    return GridView.count(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: 2,
-      mainAxisSpacing: 16,
-      crossAxisSpacing: 16,
-      childAspectRatio: 1.1,
-      children: [
-        // Attendance Circle
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: surfaceColor,
-            borderRadius: BorderRadius.circular(32),
-            border: Border.all(color: borderColor),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Stack(
-                alignment: Alignment.center,
-                children: [
-                  SizedBox(
-                    width: 70,
-                    height: 70,
-                    child: CustomPaint(
-                      painter: ProgressRingPainter(
-                        progress: 0.92,
-                        primaryColor: successColor,
-                        isDarkMode: isDarkMode,
+    return StreamBuilder<QuerySnapshot>(
+      stream: _db.getStudentAttendanceHistory(uid),
+      builder: (context, attendanceSnapshot) {
+        double attendancePct = 0.0;
+        if (attendanceSnapshot.hasData &&
+            attendanceSnapshot.data!.docs.isNotEmpty) {
+          final docs = attendanceSnapshot.data!.docs;
+          final present = docs
+              .where((d) => (d.data() as Map)['status'] == 'Present')
+              .length;
+          attendancePct = (present / docs.length);
+        }
+
+        return StreamBuilder<QuerySnapshot>(
+          stream: _db.getStudentExamResults(uid),
+          builder: (context, examsSnapshot) {
+            double avgMarks = 0.0;
+            if (examsSnapshot.hasData && examsSnapshot.data!.docs.isNotEmpty) {
+              double totalPct = 0;
+              int count = 0;
+              for (var doc in examsSnapshot.data!.docs) {
+                final data = doc.data() as Map<String, dynamic>;
+                final marks =
+                    (data['marksObtained'] as num?)?.toDouble() ?? 0.0;
+                final total = (data['totalMarks'] as num?)?.toDouble() ?? 100.0;
+                if (total > 0) {
+                  totalPct += (marks / total) * 100;
+                  count++;
+                }
+              }
+              if (count > 0) avgMarks = totalPct / count;
+            }
+
+            return GridView.count(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              crossAxisCount: 2,
+              mainAxisSpacing: 16,
+              crossAxisSpacing: 16,
+              childAspectRatio: 1.1,
+              children: [
+                // Attendance Circle
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: surfaceColor,
+                    borderRadius: BorderRadius.circular(32),
+                    border: Border.all(color: borderColor),
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          SizedBox(
+                            width: 70,
+                            height: 70,
+                            child: CustomPaint(
+                              painter: ProgressRingPainter(
+                                progress: attendancePct,
+                                primaryColor: successColor,
+                                isDarkMode: isDarkMode,
+                              ),
+                            ),
+                          ),
+                          Text(
+                            '${(attendancePct * 100).toStringAsFixed(0)}%',
+                            style: GoogleFonts.lexend(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: textColor,
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Attendance',
+                        style: GoogleFonts.lexend(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: subTextColor,
+                        ),
+                      ),
+                    ],
                   ),
-                  Text(
-                    '92%',
-                    style: GoogleFonts.lexend(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: textColor,
-                    ),
+                ),
+                // Avg Marks
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: surfaceColor,
+                    borderRadius: BorderRadius.circular(32),
+                    border: Border.all(color: borderColor),
                   ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Attendance',
-                style: GoogleFonts.lexend(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  color: subTextColor,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: primaryColor.withValues(alpha: 0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.trending_up_rounded,
+                          color: primaryColor,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        avgMarks.toStringAsFixed(1),
+                        style: GoogleFonts.lexend(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: textColor,
+                        ),
+                      ),
+                      Text(
+                        'Avg. Marks (%)',
+                        style: GoogleFonts.lexend(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: subTextColor,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
-          ),
-        ),
-        // Avg Marks
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: surfaceColor,
-            borderRadius: BorderRadius.circular(32),
-            border: Border.all(color: borderColor),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: primaryColor.withOpacity(0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(Icons.trending_up_rounded, color: primaryColor),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                '88.5',
-                style: GoogleFonts.lexend(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: textColor,
-                ),
-              ),
-              Text(
-                'Avg. Marks',
-                style: GoogleFonts.lexend(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  color: subTextColor,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
+              ],
+            );
+          },
+        );
+      },
     );
   }
 
@@ -338,6 +428,8 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
     Color textColor,
     Color subTextColor,
   ) {
+    if (_uid == null) return const SizedBox.shrink();
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -354,7 +446,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
               Icon(
                 Icons.history_rounded,
                 size: 20,
-                color: subTextColor.withOpacity(0.5),
+                color: subTextColor.withValues(alpha: 0.5),
               ),
               const SizedBox(width: 8),
               Text(
@@ -368,20 +460,67 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
             ],
           ),
           const SizedBox(height: 20),
-          _buildActivityItem(
-            'Submitted Physics Lab Report',
-            'Today, 09:15 AM',
-            primaryColor,
-            textColor,
-            subTextColor,
-          ),
-          const SizedBox(height: 16),
-          _buildActivityItem(
-            'Attended Mathematics Lecture',
-            'Yesterday',
-            successColor,
-            textColor,
-            subTextColor,
+          StreamBuilder<QuerySnapshot>(
+            stream: _db.getStudentAttendanceHistory(_uid),
+            builder: (context, snapshot) {
+              if (!snapshot.hasData) {
+                return const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(8.0),
+                    child: CircularProgressIndicator(),
+                  ),
+                );
+              }
+
+              final docs = snapshot.data!.docs;
+              if (docs.isEmpty) {
+                return Text(
+                  'No recent activity.',
+                  style: GoogleFonts.lexend(color: subTextColor, fontSize: 12),
+                );
+              }
+
+              // Take top 3 recent
+              final recentDocs = docs.take(3).toList();
+
+              return Column(
+                children: recentDocs.map((doc) {
+                  final data = doc.data() as Map<String, dynamic>;
+                  final status = data['status'] ?? 'Absent';
+                  final date = (data['date'] as Timestamp).toDate();
+                  final subject = data['subjectName'] ?? 'Class';
+
+                  final isPresent = status == 'Present';
+                  final color = isPresent ? successColor : Colors.redAccent;
+
+                  // Format time: "Today, 09:15 AM" or "Feb 12, 10:00 AM"
+                  final now = DateTime.now();
+                  String timeStr;
+                  if (date.year == now.year &&
+                      date.month == now.month &&
+                      date.day == now.day) {
+                    timeStr = 'Today';
+                  } else if (date.year == now.year &&
+                      date.month == now.month &&
+                      date.day == now.day - 1) {
+                    timeStr = 'Yesterday';
+                  } else {
+                    timeStr = '${date.day}/${date.month}';
+                  }
+
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 16.0),
+                    child: _buildActivityItem(
+                      'Marked $status in $subject',
+                      timeStr,
+                      color,
+                      textColor,
+                      subTextColor,
+                    ),
+                  );
+                }).toList(),
+              );
+            },
           ),
         ],
       ),
@@ -421,7 +560,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                 time,
                 style: GoogleFonts.lexend(
                   fontSize: 10,
-                  color: subTextColor.withOpacity(0.6),
+                  color: subTextColor.withValues(alpha: 0.6),
                 ),
               ),
             ],
@@ -459,56 +598,86 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
           // Content
           Padding(
             padding: const EdgeInsets.all(20),
-            child: Column(
-              children: [
-                _buildAcademicRecord(
-                  'Physics',
-                  'Unit 3 Test',
-                  '45/50',
-                  'Distinction',
-                  successColor,
-                  Icons.biotech_rounded,
-                  isDarkMode,
-                  textColor,
-                  subTextColor,
-                ),
-                const SizedBox(height: 16),
-                _buildAcademicRecord(
-                  'Mathematics',
-                  'Mid-term Exam',
-                  '92/100',
-                  'Excellent',
-                  successColor,
-                  Icons.functions_rounded,
-                  isDarkMode,
-                  textColor,
-                  subTextColor,
-                ),
-                const SizedBox(height: 20),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () {},
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: primaryColor.withOpacity(0.05),
-                      foregroundColor: primaryColor,
-                      elevation: 0,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
+            child: _selectedTabIndex == 0
+                ? StreamBuilder<QuerySnapshot>(
+                    stream: _db.getStudentExamResults(_uid!),
+                    builder: (context, snapshot) {
+                      if (!snapshot.hasData) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+                      if (snapshot.data!.docs.isEmpty) {
+                        return Text(
+                          "No academic records",
+                          style: GoogleFonts.lexend(color: subTextColor),
+                        );
+                      }
+
+                      return Column(
+                        children: snapshot.data!.docs.map((doc) {
+                          final data = doc.data() as Map<String, dynamic>;
+                          final marks = data['marksObtained'];
+                          final total = data['totalMarks'] ?? 100;
+
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: _buildAcademicRecord(
+                              data['subjectName'] ?? 'General',
+                              data['examTitle'] ?? 'Exam',
+                              "$marks/$total",
+                              data['status'] ?? 'Pass',
+                              (data['status'] == 'Fail')
+                                  ? Colors.red
+                                  : successColor,
+                              Icons.assignment_turned_in_rounded,
+                              isDarkMode,
+                              textColor,
+                              subTextColor,
+                            ),
+                          );
+                        }).toList(),
+                      );
+                    },
+                  )
+                : Column(
+                    children: [
+                      _buildAcademicRecord(
+                        'Mathematics',
+                        'Attendance Record',
+                        '95%',
+                        'Good',
+                        successColor,
+                        Icons.calendar_today_rounded,
+                        isDarkMode,
+                        textColor,
+                        subTextColor,
                       ),
-                    ),
-                    child: Text(
-                      'View All Records',
-                      style: GoogleFonts.lexend(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
+                      const SizedBox(height: 20),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: () {},
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: primaryColor.withValues(
+                              alpha: 0.05,
+                            ),
+                            foregroundColor: primaryColor,
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                          ),
+                          child: Text(
+                            'View All Records',
+                            style: GoogleFonts.lexend(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
+                    ],
                   ),
-                ),
-              ],
-            ),
           ),
         ],
       ),
@@ -541,7 +710,9 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
             style: GoogleFonts.lexend(
               fontSize: 12,
               fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-              color: isSelected ? primaryColor : subTextColor.withOpacity(0.6),
+              color: isSelected
+                  ? primaryColor
+                  : subTextColor.withValues(alpha: 0.6),
             ),
           ),
         ),
@@ -575,7 +746,10 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
               color: isDarkMode ? Colors.white10 : Colors.white,
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
-                BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 4),
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.03),
+                  blurRadius: 4,
+                ),
               ],
             ),
             child: Icon(
@@ -601,7 +775,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                   testName,
                   style: GoogleFonts.lexend(
                     fontSize: 10,
-                    color: subTextColor.withOpacity(0.6),
+                    color: subTextColor.withValues(alpha: 0.6),
                   ),
                 ),
               ],
@@ -638,7 +812,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
     Color subTextColor,
     bool isDarkMode,
   ) {
-    return TeacherBottomNavigation(currentIndex: 1, isDarkMode: isDarkMode);
+    return StudentBottomNavigation(currentIndex: 4, isDarkMode: isDarkMode);
   }
 }
 

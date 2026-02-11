@@ -80,11 +80,13 @@ class _LoginScreenState extends State<LoginScreen> {
           if (mounted) _navigateToDashboard(role, uid);
         }
       } on FirebaseAuthException catch (e) {
+        if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Online Login Failed: ${e.message}')),
         );
       }
     } catch (e) {
+      if (!context.mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Error: $e')));
@@ -212,7 +214,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.1),
+                    color: Colors.white.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
@@ -236,7 +238,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   textAlign: TextAlign.center,
                   style: GoogleFonts.lexend(
                     fontSize: 18,
-                    color: Colors.white.withOpacity(0.8),
+                    color: Colors.white.withValues(alpha: 0.8),
                     height: 1.5,
                   ),
                 ),
@@ -276,7 +278,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: primaryColor.withOpacity(0.3),
+                    color: primaryColor.withValues(alpha: 0.3),
                     offset: const Offset(0, 4),
                     blurRadius: 12,
                   ),
@@ -451,7 +453,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 borderRadius: BorderRadius.circular(16),
               ),
               elevation: 4,
-              shadowColor: primaryColor.withOpacity(0.4),
+              shadowColor: primaryColor.withValues(alpha: 0.4),
             ),
             child: _isLoading
                 ? const SizedBox(
@@ -509,10 +511,10 @@ class _LoginScreenState extends State<LoginScreen> {
             textAlign: TextAlign.center,
             style: GoogleFonts.lexend(
               fontSize: 12,
-              color: subTextColor.withOpacity(0.5),
+              color: subTextColor.withValues(alpha: 0.5),
             ),
           ),
-          collapsedIconColor: subTextColor.withOpacity(0.5),
+          collapsedIconColor: subTextColor.withValues(alpha: 0.5),
           iconColor: subTextColor,
           children: [
             Wrap(
@@ -541,7 +543,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   onPressed: () => Navigator.pushReplacement(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const StudentDashboard(),
+                      builder: (context) =>
+                          const StudentDashboard(uid: 'student_123'),
                     ),
                   ),
                   icon: const Icon(Icons.person_outline, size: 16),
@@ -574,7 +577,7 @@ class _LoginScreenState extends State<LoginScreen> {
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
+                    color: Colors.black.withValues(alpha: 0.05),
                     blurRadius: 4,
                     offset: const Offset(0, 2),
                   ),
@@ -672,43 +675,6 @@ class _LoginScreenState extends State<LoginScreen> {
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide(color: primaryColor, width: 2),
             ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildProfileItem(
-    String name,
-    String imageUrl,
-    bool isSelected,
-    bool isDarkMode,
-  ) {
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(3),
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: isSelected ? primaryColor : Colors.transparent,
-              width: 2,
-            ),
-          ),
-          child: Opacity(
-            opacity: isSelected ? 1.0 : 0.6,
-            child: ProfileImage(imageUrl: imageUrl, size: 48),
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          name,
-          style: GoogleFonts.lexend(
-            fontSize: 12,
-            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-            color: isSelected
-                ? (isDarkMode ? Colors.white : const Color(0xff1e293b))
-                : (isDarkMode ? Colors.white54 : const Color(0xff64748b)),
           ),
         ),
       ],

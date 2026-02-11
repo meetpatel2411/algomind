@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'student_dashboard.dart';
 import 'widgets/profile_image.dart';
-import 'enrolled_courses_screen.dart';
-import 'timetable_screen.dart';
+import 'widgets/student_bottom_navigation.dart';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'services/database_service.dart';
+import 'widgets/connectivity_indicator.dart';
 
 class LearningAnalyticsScreen extends StatefulWidget {
-  const LearningAnalyticsScreen({super.key});
+  final String? uid;
+  const LearningAnalyticsScreen({super.key, this.uid});
 
   @override
   State<LearningAnalyticsScreen> createState() =>
@@ -17,8 +21,6 @@ class _LearningAnalyticsScreenState extends State<LearningAnalyticsScreen> {
   final Color primaryColor = const Color(0xff0f68e6);
   final Color backgroundLight = const Color(0xfff6f7f8);
   final Color backgroundDark = const Color(0xff101722);
-
-  int _selectedIndex = 3; // Analytics index
 
   @override
   Widget build(BuildContext context) {
@@ -37,71 +39,183 @@ class _LearningAnalyticsScreenState extends State<LearningAnalyticsScreen> {
 
     return Scaffold(
       backgroundColor: bgColor,
-      body: SafeArea(
-        child: Stack(
-          children: [
-            SingleChildScrollView(
-              padding: const EdgeInsets.only(bottom: 110),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildHeader(isDarkMode, textColor, subTextColor),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: Column(
-                      children: [
-                        const SizedBox(height: 16),
-                        _buildQuickStats(
-                          surfaceColor,
-                          textColor,
-                          subTextColor,
-                          borderColor,
-                        ),
-                        const SizedBox(height: 24),
-                        _buildSubjectFilter(
-                          isDarkMode,
-                          surfaceColor,
-                          textColor,
-                          subTextColor,
-                          borderColor,
-                        ),
-                        const SizedBox(height: 24),
-                        _buildPerformanceChart(
-                          surfaceColor,
-                          textColor,
-                          subTextColor,
-                          borderColor,
-                        ),
-                        const SizedBox(height: 24),
-                        _buildProgressIndicators(
-                          surfaceColor,
-                          textColor,
-                          subTextColor,
-                          borderColor,
-                        ),
-                        const SizedBox(height: 24),
-                        _buildAttendanceMarksChart(
-                          surfaceColor,
-                          textColor,
-                          subTextColor,
-                          borderColor,
-                        ),
-                        const SizedBox(height: 24),
-                        _buildAchievementCard(),
-                        const SizedBox(height: 24),
-                      ],
+      body: ConnectivityIndicator(
+        child: SafeArea(
+          child: Stack(
+            children: [
+              FutureBuilder<Map<String, dynamic>?>(
+                future: DatabaseService().getUserProfile(
+                  widget.uid ?? FirebaseAuth.instance.currentUser?.uid ?? '',
+                ),
+                builder: (context, userSnapshot) {
+                  if (userSnapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+
+                  // If we have a user profile, we can fetch attendance
+                  // Use currentUser.uid as studentId (since we used uid as doc ID)
+                  final studentId =
+                      widget.uid ??
+                      FirebaseAuth.instance.currentUser?.uid ??
+                      '';
+
+                  return StreamBuilder<QuerySnapshot>(
+                    stream: DatabaseService().getStudentAttendanceHistory(
+                      studentId,
                     ),
-                  ),
-                ],
+                    builder: (context, attendanceSnapshot) {
+                      if (attendanceSnapshot.hasError) {
+                        return Center(
+                          child: Text(
+                            "Error loading attendance: ${attendanceSnapshot.error}",
+                            style: GoogleFonts.lexend(color: Colors.red),
+                          ),
+                        );
+                      }
+
+                      // Calculate Attendance stats
+                      double attendancePct = 0.0;
+                      String attendanceTrend = "No Data";
+
+                      if (attendanceSnapshot.hasData &&
+                          attendanceSnapshot.data!.docs.isNotEmpty) {
+                        final docs = attendanceSnapshot.data!.docs;
+                        final total = docs.length;
+                        final present = docs
+                            .where(
+                              (doc) =>
+                                  (doc.data()
+                                      as Map<String, dynamic>)['status'] ==
+                                  'Present',
+                            )
+                            .length;
+                        attendancePct = total > 0 ? (present / total) : 0.0;
+                        attendanceTrend = "Total $total sessions";
+                      }
+
+                      return StreamBuilder<QuerySnapshot>(
+                        stream: DatabaseService().getStudentExamResults(
+                          studentId,
+                        ),
+                        builder: (context, examsSnapshot) {
+                          if (examsSnapshot.hasError) {
+                            return Center(
+                              child: Text(
+                                "Error loading exams: ${examsSnapshot.error}",
+                                style: GoogleFonts.lexend(color: Colors.red),
+                              ),
+                            );
+                          }
+
+                          // Calculate Exam Stats
+                          double totalPercentage = 0.0;
+                          int examCount = 0;
+
+                          if (examsSnapshot.hasData &&
+                              examsSnapshot.data!.docs.isNotEmpty) {
+                            for (var doc in examsSnapshot.data!.docs) {
+                              final data = doc.data() as Map<String, dynamic>;
+                              final marks =
+                                  (data['marksObtained'] as num?)?.toDouble() ??
+                                  0.0;
+                              final total =
+                                  (data['totalMarks'] as num?)?.toDouble() ??
+                                  100.0; // Default 100 if missing
+                              if (total > 0) {
+                                totalPercentage += (marks / total);
+                                examCount++;
+                              }
+                            }
+                          }
+
+                          // GPA Calculation (Simple: Avg % * 4)
+                          double gpa = examCount > 0
+                              ? (totalPercentage / examCount) * 4.0
+                              : 0.0;
+                          String gpaString = gpa.toStringAsFixed(2);
+
+                          return SingleChildScrollView(
+                            padding: const EdgeInsets.only(bottom: 110),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildHeader(
+                                  isDarkMode,
+                                  textColor,
+                                  subTextColor,
+                                ),
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 24,
+                                  ),
+                                  child: Column(
+                                    children: [
+                                      const SizedBox(height: 16),
+                                      _buildQuickStats(
+                                        attendancePct,
+                                        attendanceTrend,
+                                        gpaString, // Pass real GPA
+                                        surfaceColor,
+                                        textColor,
+                                        subTextColor,
+                                        borderColor,
+                                      ),
+                                      const SizedBox(height: 24),
+                                      _buildSubjectFilter(
+                                        isDarkMode,
+                                        surfaceColor,
+                                        textColor,
+                                        subTextColor,
+                                        borderColor,
+                                      ),
+                                      const SizedBox(height: 24),
+                                      _buildPerformanceChart(
+                                        surfaceColor,
+                                        textColor,
+                                        subTextColor,
+                                        borderColor,
+                                      ),
+                                      const SizedBox(height: 24),
+                                      _buildProgressIndicators(
+                                        surfaceColor,
+                                        textColor,
+                                        subTextColor,
+                                        borderColor,
+                                      ),
+                                      const SizedBox(height: 24),
+                                      _buildAttendanceMarksChart(
+                                        surfaceColor,
+                                        textColor,
+                                        subTextColor,
+                                        borderColor,
+                                      ),
+                                      const SizedBox(height: 24),
+                                      _buildAchievementCard(),
+                                      const SizedBox(height: 24),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  );
+                },
               ),
-            ),
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: _buildBottomNav(surfaceColor, subTextColor, isDarkMode),
-            ),
-          ],
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                child: StudentBottomNavigation(
+                  currentIndex: 3,
+                  isDarkMode: isDarkMode,
+                  uid: widget.uid,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -153,7 +267,7 @@ class _LearningAnalyticsScreenState extends State<LearningAnalyticsScreen> {
             imageUrl:
                 'https://lh3.googleusercontent.com/aida-public/AB6AXuA--YFA4M-DobLnR5985RrHOfxeu1gXZfntu9O4exPvieU0T_73-FymVqoxlW7dkj9wbdbGz9hQiP2rp4MGP_wTYQESqyuUie7Qa__D9OrYrmvnDlv1CiWqkbw2TQi3jn_Tf0L5fIrVgs76yiRtYiWxy97F-urPhCiBu7DluSH4P2bS9wf8j65yk0q8WsEa6BZs8vnTZKFC2YTVlukSAE2YJILo_mmCOT-rKV3aU6UOqnrbyWPw-jwpwRlRMys0eNQabQ3TfKIRKTc',
             size: 44,
-            borderColor: primaryColor.withOpacity(0.2),
+            borderColor: primaryColor.withValues(alpha: 0.2),
             borderWidth: 2,
           ),
         ],
@@ -162,6 +276,9 @@ class _LearningAnalyticsScreenState extends State<LearningAnalyticsScreen> {
   }
 
   Widget _buildQuickStats(
+    double attendancePct,
+    String attendanceTrend,
+    String gpa,
     Color surfaceColor,
     Color textColor,
     Color subTextColor,
@@ -172,8 +289,8 @@ class _LearningAnalyticsScreenState extends State<LearningAnalyticsScreen> {
         Expanded(
           child: _buildStatItem(
             "Current GPA",
-            "3.82",
-            "+0.2",
+            gpa,
+            "+0.0", // Mock trend for now
             Colors.green,
             surfaceColor,
             textColor,
@@ -185,8 +302,8 @@ class _LearningAnalyticsScreenState extends State<LearningAnalyticsScreen> {
         Expanded(
           child: _buildStatItem(
             "Attendance",
-            "94%",
-            "Last 30d",
+            "${(attendancePct * 100).toInt()}%",
+            attendanceTrend,
             subTextColor,
             surfaceColor,
             textColor,
@@ -216,7 +333,7 @@ class _LearningAnalyticsScreenState extends State<LearningAnalyticsScreen> {
         border: Border.all(color: borderColor),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: Colors.black.withValues(alpha: 0.02),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -291,7 +408,7 @@ class _LearningAnalyticsScreenState extends State<LearningAnalyticsScreen> {
                 boxShadow: isSelected
                     ? [
                         BoxShadow(
-                          color: primaryColor.withOpacity(0.2),
+                          color: primaryColor.withValues(alpha: 0.2),
                           blurRadius: 10,
                           offset: const Offset(0, 4),
                         ),
@@ -329,7 +446,7 @@ class _LearningAnalyticsScreenState extends State<LearningAnalyticsScreen> {
         border: Border.all(color: borderColor),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: Colors.black.withValues(alpha: 0.02),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -460,7 +577,7 @@ class _LearningAnalyticsScreenState extends State<LearningAnalyticsScreen> {
                   valueColor: AlwaysStoppedAnimation<Color>(
                     label == "Syllabus"
                         ? primaryColor
-                        : primaryColor.withOpacity(0.6),
+                        : primaryColor.withValues(alpha: 0.6),
                   ),
                   strokeCap: StrokeCap.round,
                 ),
@@ -533,7 +650,7 @@ class _LearningAnalyticsScreenState extends State<LearningAnalyticsScreen> {
                 children: [
                   _chartLegendItem("Mark", primaryColor),
                   const SizedBox(width: 8),
-                  _chartLegendItem("Att.", primaryColor.withOpacity(0.2)),
+                  _chartLegendItem("Att.", primaryColor.withValues(alpha: 0.2)),
                 ],
               ),
             ],
@@ -601,7 +718,7 @@ class _LearningAnalyticsScreenState extends State<LearningAnalyticsScreen> {
               child: Container(
                 height: 12,
                 decoration: BoxDecoration(
-                  color: primaryColor.withOpacity(0.2),
+                  color: primaryColor.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
@@ -625,9 +742,9 @@ class _LearningAnalyticsScreenState extends State<LearningAnalyticsScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: primaryColor.withOpacity(0.05),
+        color: primaryColor.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: primaryColor.withOpacity(0.1)),
+        border: Border.all(color: primaryColor.withValues(alpha: 0.1)),
       ),
       child: Row(
         children: [
@@ -638,7 +755,10 @@ class _LearningAnalyticsScreenState extends State<LearningAnalyticsScreen> {
               color: Colors.white,
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
-                BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 5),
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 5,
+                ),
               ],
             ),
             child: const Icon(
@@ -674,104 +794,6 @@ class _LearningAnalyticsScreenState extends State<LearningAnalyticsScreen> {
       ),
     );
   }
-
-  Widget _buildBottomNav(
-    Color surfaceColor,
-    Color subTextColor,
-    bool isDarkMode,
-  ) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
-      decoration: BoxDecoration(
-        color: hideBottomNavBlur ? surfaceColor : surfaceColor.withOpacity(0.9),
-        border: Border(
-          top: BorderSide(
-            color: isDarkMode ? Colors.white10 : const Color(0xffe2e8f0),
-          ),
-        ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          _buildNavItem(Icons.grid_view_rounded, 'Home', 0, subTextColor),
-          _buildNavItem(Icons.schedule_rounded, 'Timetable', 2, subTextColor),
-          _buildNavItem(
-            Icons.local_library_rounded,
-            'Courses',
-            1,
-            subTextColor,
-          ),
-          _buildNavItem(
-            Icons.insert_chart_rounded,
-            'Analytics',
-            3,
-            subTextColor,
-          ),
-          _buildNavItem(
-            Icons.person_outline_rounded,
-            'Profile',
-            4,
-            subTextColor,
-          ),
-        ],
-      ),
-    );
-  }
-
-  bool get hideBottomNavBlur => false;
-
-  Widget _buildNavItem(
-    IconData icon,
-    String label,
-    int index,
-    Color subTextColor,
-  ) {
-    final bool isSelected = _selectedIndex == index;
-    return GestureDetector(
-      onTap: () {
-        if (index == _selectedIndex) return;
-        if (index == 0) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const StudentDashboard()),
-          );
-        } else if (index == 1) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const EnrolledCoursesScreen(),
-            ),
-          );
-        } else if (index == 2) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const TimetableScreen()),
-          );
-        } else if (index == 3) {
-          return;
-        }
-      },
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            icon,
-            color: isSelected ? primaryColor : subTextColor.withOpacity(0.6),
-            size: 24,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: GoogleFonts.lexend(
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
-              color: isSelected ? primaryColor : subTextColor.withOpacity(0.6),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 class PerformanceLinePainter extends CustomPainter {
@@ -787,7 +809,7 @@ class PerformanceLinePainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final Paint gridPaint = Paint()
       ..color = isDarkMode
-          ? Colors.white.withOpacity(0.05)
+          ? Colors.white.withValues(alpha: 0.05)
           : Colors.grey.shade100
       ..strokeWidth = 1;
 
@@ -834,7 +856,10 @@ class PerformanceLinePainter extends CustomPainter {
       ..shader = LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
-        colors: [primaryColor.withOpacity(0.15), primaryColor.withOpacity(0)],
+        colors: [
+          primaryColor.withValues(alpha: 0.15),
+          primaryColor.withValues(alpha: 0),
+        ],
       ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
 
     canvas.drawPath(fillPath, fillPaint);

@@ -111,7 +111,7 @@ class _AttendanceSelectionScreenState extends State<AttendanceSelectionScreen> {
       decoration: BoxDecoration(
         color: isDarkMode ? backgroundDark : backgroundLight,
         border: Border(
-          bottom: BorderSide(color: primaryColor.withOpacity(0.1)),
+          bottom: BorderSide(color: primaryColor.withValues(alpha: 0.1)),
         ),
       ),
       child: Column(
@@ -134,7 +134,7 @@ class _AttendanceSelectionScreenState extends State<AttendanceSelectionScreen> {
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      color: primaryColor.withOpacity(0.1),
+                      color: primaryColor.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
@@ -147,7 +147,7 @@ class _AttendanceSelectionScreenState extends State<AttendanceSelectionScreen> {
                   ProfileImage(
                     imageUrl:
                         'https://lh3.googleusercontent.com/aida-public/AB6AXuDgejt07EF9MSgZjNM-s0g6YovkAde8QT-NtNCrYjN0zHN8SlI1owZ7wxKG0utEYhn1-HJSnLnp1xB3BFlB6McA8_ynPXo7laY9WC0g9Lb58R4pJ0I9PWu7VbQkvvBWByU_KlNVOdPAafj0_-rrdSH9Z14JtXa6cElckRVJO--EGBHoAtqcjng8gF98KVLCkYifFY_o_qqssxJl5hYNBThbu6HMczgPl3FcdninAWD4d9wh3End-RcHYolE1zYn_oTO9F35tmVD0UY',
-                    borderColor: primaryColor.withOpacity(0.2),
+                    borderColor: primaryColor.withValues(alpha: 0.2),
                     borderWidth: 2,
                   ),
                 ],
@@ -185,9 +185,9 @@ class _AttendanceSelectionScreenState extends State<AttendanceSelectionScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       decoration: BoxDecoration(
-        color: primaryColor.withOpacity(0.05),
+        color: primaryColor.withValues(alpha: 0.05),
         border: Border(
-          bottom: BorderSide(color: primaryColor.withOpacity(0.1)),
+          bottom: BorderSide(color: primaryColor.withValues(alpha: 0.1)),
         ),
       ),
       child: Row(
@@ -199,7 +199,7 @@ class _AttendanceSelectionScreenState extends State<AttendanceSelectionScreen> {
             style: GoogleFonts.lexend(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: primaryColor.withOpacity(0.8),
+              color: primaryColor.withValues(alpha: 0.8),
               letterSpacing: 0.5,
             ),
           ),
@@ -249,7 +249,7 @@ class _AttendanceSelectionScreenState extends State<AttendanceSelectionScreen> {
                 boxShadow: isSelected
                     ? [
                         BoxShadow(
-                          color: primaryColor.withOpacity(0.3),
+                          color: primaryColor.withValues(alpha: 0.3),
                           blurRadius: 10,
                           offset: const Offset(0, 4),
                         ),
@@ -265,7 +265,7 @@ class _AttendanceSelectionScreenState extends State<AttendanceSelectionScreen> {
                       fontSize: 10,
                       fontWeight: FontWeight.bold,
                       color: isSelected
-                          ? Colors.white.withOpacity(0.8)
+                          ? Colors.white.withValues(alpha: 0.8)
                           : subTextColor,
                     ),
                   ),
@@ -334,7 +334,7 @@ class _AttendanceSelectionScreenState extends State<AttendanceSelectionScreen> {
                 style: GoogleFonts.lexend(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
-                  color: subTextColor.withOpacity(0.6),
+                  color: subTextColor.withValues(alpha: 0.6),
                   letterSpacing: 1.5,
                 ),
               ),
@@ -391,7 +391,7 @@ class _AttendanceSelectionScreenState extends State<AttendanceSelectionScreen> {
       statusBg = const Color(0xffdcfce7);
       statusText = const Color(0xff16a34a);
     } else if (status == 'In Progress') {
-      statusBg = primaryColor.withOpacity(0.1);
+      statusBg = primaryColor.withValues(alpha: 0.1);
       statusText = primaryColor;
     } else {
       statusBg = isDarkMode ? const Color(0xff334155) : const Color(0xfff1f5f9);
@@ -409,14 +409,14 @@ class _AttendanceSelectionScreenState extends State<AttendanceSelectionScreen> {
           boxShadow: isInProgress
               ? [
                   BoxShadow(
-                    color: primaryColor.withOpacity(0.05),
+                    color: primaryColor.withValues(alpha: 0.05),
                     blurRadius: 10,
                     offset: const Offset(0, 4),
                   ),
                 ]
               : [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.02),
+                    color: Colors.black.withValues(alpha: 0.02),
                     blurRadius: 4,
                     offset: const Offset(0, 2),
                   ),
@@ -528,7 +528,7 @@ class _AttendanceSelectionScreenState extends State<AttendanceSelectionScreen> {
                             borderRadius: BorderRadius.circular(12),
                           ),
                           elevation: 4,
-                          shadowColor: primaryColor.withOpacity(0.4),
+                          shadowColor: primaryColor.withValues(alpha: 0.4),
                           textStyle: GoogleFonts.lexend(
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
@@ -677,14 +677,14 @@ class _AttendanceSelectionScreenState extends State<AttendanceSelectionScreen> {
                       style: GoogleFonts.lexend(
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
-                        color: subTextColor.withOpacity(0.5),
+                        color: subTextColor.withValues(alpha: 0.5),
                       ),
                     ),
                     const SizedBox(width: 4),
                     Icon(
                       Icons.save_outlined,
                       size: 18,
-                      color: subTextColor.withOpacity(0.3),
+                      color: subTextColor.withValues(alpha: 0.3),
                     ),
                   ],
                 ),
@@ -704,7 +704,7 @@ class _AttendanceSelectionScreenState extends State<AttendanceSelectionScreen> {
     return Container(
       padding: const EdgeInsets.only(top: 12, bottom: 32, left: 32, right: 32),
       decoration: BoxDecoration(
-        color: surfaceColor.withOpacity(0.95),
+        color: surfaceColor.withValues(alpha: 0.95),
         border: Border(top: BorderSide(color: borderColor)),
       ),
       child: Row(

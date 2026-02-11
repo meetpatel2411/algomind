@@ -1,5 +1,8 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'services/database_service.dart';
 import 'widgets/profile_image.dart';
 import 'widgets/teacher_bottom_navigation.dart';
 
@@ -16,47 +19,40 @@ class _StudentEvaluationScreenState extends State<StudentEvaluationScreen> {
   final Color backgroundLight = const Color(0xfff6f7f8);
   final Color backgroundDark = const Color(0xff101722);
   final Color successColor = const Color(0xff10b981);
-  final Color errorColor = const Color(0xffef4444); // rose-500
-  final Color warningColor = const Color(0xfff59e0b); // amber-500
+  final Color errorColor = const Color(0xffef4444);
+  final Color warningColor = const Color(0xfff59e0b);
 
-  final List<Map<String, dynamic>> _students = [
-    {
-      'name': 'Alexandria Rivers',
-      'id': 'RM-2024-082',
-      'score': 94,
-      'status': 'Pass',
-      'isEligible': true,
-      'imageUrl':
-          'https://lh3.googleusercontent.com/aida-public/AB6AXuAuJB40ACwdGv5GXVeNWDn_nPXtxfutpKgBXE2XaYeCCSerbNF0MVba9tchTBCccxqd9_z2RvW6C6gomhmI03nWr7ZQO6OI6bHqFE9D17-mHzEqKCcxphs8ljmrAbn5_t2dumt5qQ1eEF8S2j6vY9pgUPGQBzhgF_nYjHEMUWPS246AJ7zTygYQISmjlJ1Xj9diV15H6CORL46W4WKhNG77B8jV_OaGpssIiUx4TnDPfumqjjHeEaiACxwa8fAOjGLFBJUxaQ-X-YA',
-    },
-    {
-      'name': 'Marcus Sterling',
-      'id': 'RM-2024-114',
-      'score': 88,
-      'status': 'Pass',
-      'isEligible': true,
-      'imageUrl':
-          'https://lh3.googleusercontent.com/aida-public/AB6AXuACMeRSCrGLqoxG9WaG4YGZn3tY6rbU8_iM2Ezx45kTK77PawlzGTWFF_9CsHFz6E6VSNdvHACD7kQOc53dVSXic17fg9UWhVy-w_0DUP5r0GOHM8ilAR8KL3f60GXvc0aW8OCPFFWvNftgBZuDuoE9pqbcxMwEnBcvcDpLXpFm355kk6rZYYGkJvhn500czrsZHTSD0ecHdrtosFJUk73YxB-SJtN4auhlYOd9WOMXKeoSc06Y40oUoFRoZ0LToT5MrOsPlt64gd4',
-    },
-    {
-      'name': 'Elena Vance',
-      'id': 'RM-2024-009',
-      'score': 52,
-      'status': 'Fail',
-      'isEligible': false,
-      'imageUrl':
-          'https://lh3.googleusercontent.com/aida-public/AB6AXuBQQoJROb0i8xGoQjfBOxO5076_vFFkliqh99J3KL-lVG2rffzPwbZmd1PIeSELmizUgzOtuAXP7bpUEPZlcF3A7DG_0NHTMqFla7YZwb-qLUPJ_3_uWnmC80AUWi1pcC-JV0-kwsSjcg-DQ-G3tjd7OHEM8ywIihiqznwZEn1O-GQPuYOSkIhP_aXdg5TK0fQeFR_rIULoXSUjzPfB8ogRFZAbK_Zg7KJQCpVGhr7zliQMErwOloW7vGxbel2TmPbYKFxwTBuzFgI',
-    },
-    {
-      'name': 'Julian Thorne',
-      'id': 'RM-2024-121',
-      'score': 76,
-      'status': 'Pass',
-      'isEligible': true,
-      'imageUrl':
-          'https://lh3.googleusercontent.com/aida-public/AB6AXuDn7-NmBiN0R1b72rcZo5Y4K566ZLsiKXCbILjffiXJ3FainlkbgMk4aWduKUuUWoTkhDbhXAVhuyGEAQa6dKSsxF54LeC6UxlwLrC5QLmk0qnMucSQWa1Zshj9ZRnkYF1P2NO3nwbcHXpUU0WCnPeuuDwYPa-SCuPZdMCcu1ezt-dmuCv6OEycqN6_P0sids66COLfQ3nXO75IBFmFa983ZOLbSvVoKjs_bH2PTA1IZfrBb9WkVc34hKQcmoV1YxG6lZss6lBFxaQ',
-    },
-  ];
+  final DatabaseService _db = DatabaseService();
+  String? _selectedClassId;
+  // String _selectedClassName = 'Select Class'; // Corrected: Unused
+  List<DocumentSnapshot> _classes = [];
+  bool _isLoadingClasses = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchClasses();
+  }
+
+  Future<void> _fetchClasses() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid != null) {
+      _db.getTeacherClasses(uid).listen((snapshot) {
+        if (mounted) {
+          setState(() {
+            _classes = snapshot.docs;
+            if (_classes.isNotEmpty && _selectedClassId == null) {
+              _selectedClassId = _classes.first.id;
+              // _selectedClassName = _classes.first['name'];
+            }
+            _isLoadingClasses = false;
+          });
+        }
+      });
+    } else {
+      if (mounted) setState(() => _isLoadingClasses = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -89,40 +85,90 @@ class _StudentEvaluationScreenState extends State<StudentEvaluationScreen> {
                   primaryColor,
                 ),
                 Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(24, 24, 24, 100),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildSummaryStats(
-                          surfaceColor,
-                          borderColor,
-                          subTextColor,
-                          textColor,
-                        ),
-                        const SizedBox(height: 32),
-                        _buildListControls(primaryColor, subTextColor),
-                        const SizedBox(height: 16),
-                        ListView.separated(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: _students.length,
-                          separatorBuilder: (context, index) =>
-                              const SizedBox(height: 16),
-                          itemBuilder: (context, index) {
-                            return _buildStudentCard(
-                              _students[index],
-                              surfaceColor,
-                              borderColor,
-                              textColor,
-                              subTextColor,
-                              isDarkMode,
+                  child: _selectedClassId == null
+                      ? Center(
+                          child: _isLoadingClasses
+                              ? const CircularProgressIndicator()
+                              : Text(
+                                  'No classes found',
+                                  style: GoogleFonts.lexend(
+                                    color: subTextColor,
+                                  ),
+                                ),
+                        )
+                      : StreamBuilder<QuerySnapshot>(
+                          stream: _db.getStudentsByClass(_selectedClassId!),
+                          builder: (context, snapshot) {
+                            if (snapshot.connectionState ==
+                                ConnectionState.waiting) {
+                              return const Center(
+                                child: CircularProgressIndicator(),
+                              );
+                            }
+
+                            if (!snapshot.hasData ||
+                                snapshot.data!.docs.isEmpty) {
+                              return Center(
+                                child: Text(
+                                  'No students in this class',
+                                  style: GoogleFonts.lexend(
+                                    color: subTextColor,
+                                  ),
+                                ),
+                              );
+                            }
+
+                            final students = snapshot.data!.docs;
+
+                            return SingleChildScrollView(
+                              padding: const EdgeInsets.fromLTRB(
+                                24,
+                                24,
+                                24,
+                                100,
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // Summary stats could be calculated here by iterating all students
+                                  // For now, we'll keep them as placeholders or simple counts
+                                  _buildSummaryStats(
+                                    surfaceColor,
+                                    borderColor,
+                                    subTextColor,
+                                    textColor,
+                                    students.length, // Pass total count
+                                  ),
+                                  const SizedBox(height: 32),
+                                  _buildListControls(
+                                    primaryColor,
+                                    subTextColor,
+                                    students.length,
+                                  ),
+                                  const SizedBox(height: 16),
+                                  ListView.separated(
+                                    shrinkWrap: true,
+                                    physics:
+                                        const NeverScrollableScrollPhysics(),
+                                    itemCount: students.length,
+                                    separatorBuilder: (context, index) =>
+                                        const SizedBox(height: 16),
+                                    itemBuilder: (context, index) {
+                                      return _buildStudentCard(
+                                        students[index],
+                                        surfaceColor,
+                                        borderColor,
+                                        textColor,
+                                        subTextColor,
+                                        isDarkMode,
+                                      );
+                                    },
+                                  ),
+                                ],
+                              ),
                             );
                           },
                         ),
-                      ],
-                    ),
-                  ),
                 ),
               ],
             ),
@@ -156,10 +202,10 @@ class _StudentEvaluationScreenState extends State<StudentEvaluationScreen> {
       padding: const EdgeInsets.only(bottom: 16, left: 24, right: 24, top: 12),
       decoration: BoxDecoration(
         color: Theme.of(context).brightness == Brightness.dark
-            ? const Color(0xff101722).withOpacity(0.8)
-            : const Color(0xfff6f7f8).withOpacity(0.8),
+            ? const Color(0xff101722).withValues(alpha: 0.8)
+            : const Color(0xfff6f7f8).withValues(alpha: 0.8),
         border: Border(
-          bottom: BorderSide(color: primaryColor.withOpacity(0.1)),
+          bottom: BorderSide(color: primaryColor.withValues(alpha: 0.1)),
         ),
       ),
       child: Column(
@@ -173,7 +219,7 @@ class _StudentEvaluationScreenState extends State<StudentEvaluationScreen> {
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: primaryColor.withOpacity(0.1),
+                    color: primaryColor.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
@@ -183,20 +229,47 @@ class _StudentEvaluationScreenState extends State<StudentEvaluationScreen> {
                   ),
                 ),
               ),
-              Text(
-                'Student Evaluation',
+              // Class Dropdown
+              DropdownButton<String>(
+                value: _selectedClassId,
+                underline: const SizedBox(),
+                icon: Icon(
+                  Icons.keyboard_arrow_down_rounded,
+                  color: primaryColor,
+                ),
                 style: GoogleFonts.lexend(
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
                   color: textColor,
-                  letterSpacing: -0.5,
+                ),
+                dropdownColor: surfaceColor,
+                items: _classes.map((doc) {
+                  final data = doc.data() as Map<String, dynamic>;
+                  return DropdownMenuItem<String>(
+                    value: doc.id,
+                    child: Text(data['name'] ?? 'Class'),
+                  );
+                }).toList(),
+                onChanged: (val) {
+                  if (val != null) {
+                    setState(() {
+                      _selectedClassId = val;
+                      /* _selectedClassName = _classes.firstWhere(
+                        (c) => c.id == val,
+                      )['name']; */
+                    });
+                  }
+                },
+                hint: Text(
+                  'Select Class',
+                  style: TextStyle(color: subTextColor),
                 ),
               ),
               Container(
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: primaryColor.withOpacity(0.1),
+                  color: primaryColor.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(Icons.sync_rounded, color: primaryColor, size: 20),
@@ -210,7 +283,7 @@ class _StudentEvaluationScreenState extends State<StudentEvaluationScreen> {
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color: Colors.black.withValues(alpha: 0.05),
                   blurRadius: 2,
                   offset: const Offset(0, 1),
                 ),
@@ -221,11 +294,11 @@ class _StudentEvaluationScreenState extends State<StudentEvaluationScreen> {
               decoration: InputDecoration(
                 hintText: 'Search student name...',
                 hintStyle: GoogleFonts.lexend(
-                  color: subTextColor.withOpacity(0.5),
+                  color: subTextColor.withValues(alpha: 0.5),
                 ),
                 prefixIcon: Icon(
                   Icons.search_rounded,
-                  color: subTextColor.withOpacity(0.5),
+                  color: subTextColor.withValues(alpha: 0.5),
                 ),
                 border: InputBorder.none,
                 contentPadding: const EdgeInsets.symmetric(vertical: 14),
@@ -242,6 +315,7 @@ class _StudentEvaluationScreenState extends State<StudentEvaluationScreen> {
     Color borderColor,
     Color subTextColor,
     Color textColor,
+    int totalStudents,
   ) {
     return GridView.count(
       shrinkWrap: true,
@@ -259,7 +333,7 @@ class _StudentEvaluationScreenState extends State<StudentEvaluationScreen> {
             border: Border.all(color: borderColor),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.02),
+                color: Colors.black.withValues(alpha: 0.02),
                 blurRadius: 4,
                 offset: const Offset(0, 2),
               ),
@@ -270,7 +344,7 @@ class _StudentEvaluationScreenState extends State<StudentEvaluationScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'CLASS AVERAGE',
+                'TOTAL STUDENTS',
                 style: GoogleFonts.lexend(
                   fontSize: 10,
                   fontWeight: FontWeight.w600,
@@ -282,21 +356,11 @@ class _StudentEvaluationScreenState extends State<StudentEvaluationScreen> {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    '82.4',
+                    totalStudents.toString(),
                     style: GoogleFonts.lexend(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
                       color: primaryColor,
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 4, left: 4),
-                    child: Text(
-                      '/100',
-                      style: GoogleFonts.lexend(
-                        fontSize: 12,
-                        color: subTextColor,
-                      ),
                     ),
                   ),
                 ],
@@ -312,7 +376,7 @@ class _StudentEvaluationScreenState extends State<StudentEvaluationScreen> {
             border: Border.all(color: borderColor),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.02),
+                color: Colors.black.withValues(alpha: 0.02),
                 blurRadius: 4,
                 offset: const Offset(0, 2),
               ),
@@ -335,7 +399,7 @@ class _StudentEvaluationScreenState extends State<StudentEvaluationScreen> {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    '92%',
+                    '--%', // Dynamic calculation requires improved queries
                     style: GoogleFonts.lexend(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
@@ -359,12 +423,12 @@ class _StudentEvaluationScreenState extends State<StudentEvaluationScreen> {
     );
   }
 
-  Widget _buildListControls(Color primaryColor, Color subTextColor) {
+  Widget _buildListControls(Color primaryColor, Color subTextColor, int count) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
-          'RESULTS (24)',
+          'RESULTS ($count)',
           style: GoogleFonts.lexend(
             fontSize: 12,
             fontWeight: FontWeight.w600,
@@ -391,59 +455,117 @@ class _StudentEvaluationScreenState extends State<StudentEvaluationScreen> {
   }
 
   Widget _buildStudentCard(
-    Map<String, dynamic> student,
+    DocumentSnapshot studentDoc,
     Color surfaceColor,
     Color borderColor,
     Color textColor,
     Color subTextColor,
     bool isDarkMode,
   ) {
-    final bool isFail = student['status'] == 'Fail';
-    final Color scoreColor = isFail ? errorColor : textColor;
+    final data = studentDoc.data() as Map<String, dynamic>;
+    final String name = data['name'] ?? data['fullName'] ?? 'Student';
+    final String id = data['studentId'] ?? data['rollNumber'] ?? 'N/A';
+    final String imageUrl =
+        data['imageUrl'] ??
+        'https://lh3.googleusercontent.com/aida-public/AB6AXuDDJ0xT_gismssEV3tDJT-5kYdGVXCrGNSCNKwmxu_icHAUrDUt8owJFEtSDe1qLPCXqxnROGnBHSIZ7GH-U6H3SMmGMkkJ1Ca6uCEO3HwTYcwMyyMIJgaAd-70rgAIsHbISjIG4SRNf8H5PQc0evW9-XY5d2A7fH_stOAZUy-RyDk09YD-JA16RkWy6use7JvQlpOkiNWqQ2cyujIfT8bjohE5T6AytBDjzLWE68a6BXk7LCzNDZd-p632NC373yt71pGpNoehdYk';
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: surfaceColor.withOpacity(isFail ? 0.9 : 1.0),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: borderColor),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
+    // Fetch Avg Score real-time
+    return StreamBuilder<QuerySnapshot>(
+      stream: _db.getStudentExamResults(studentDoc.id),
+      builder: (context, snapshot) {
+        String scoreDisplay = '--';
+        String status = 'N/A';
+        bool isFail = false;
+
+        if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
+          final results = snapshot.data!.docs;
+          double total = 0;
+          int count = 0;
+
+          for (var res in results) {
+            final rData = res.data() as Map<String, dynamic>;
+            final marks = rData['marksObtained'];
+            if (marks != null) {
+              total += (marks as num).toDouble();
+              count++;
+            }
+          }
+
+          if (count > 0) {
+            double avg = total / count;
+            scoreDisplay = avg.toStringAsFixed(1);
+            isFail = avg < 40; // Simple logic
+            status = isFail ? 'Fail' : 'Pass';
+          }
+        }
+
+        final Color scoreColor = isFail ? errorColor : textColor;
+
+        return Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: surfaceColor.withValues(alpha: isFail ? 0.9 : 1.0),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: borderColor),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.02),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          child: Column(
             children: [
               Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  ProfileImage(
-                    imageUrl: student['imageUrl'],
-                    size: 48,
-                    borderColor: isFail
-                        ? errorColor.withOpacity(0.2)
-                        : primaryColor.withOpacity(0.2),
-                    borderWidth: 2,
+                  Row(
+                    children: [
+                      ProfileImage(
+                        imageUrl: imageUrl,
+                        size: 48,
+                        borderColor: isFail
+                            ? errorColor.withValues(alpha: 0.2)
+                            : primaryColor.withValues(alpha: 0.2),
+                        borderWidth: 2,
+                      ),
+                      const SizedBox(width: 12),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            name,
+                            style: GoogleFonts.lexend(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: textColor,
+                            ),
+                          ),
+                          Text(
+                            'ID: $id',
+                            style: GoogleFonts.lexend(
+                              fontSize: 12,
+                              color: subTextColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 12),
                   Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(
-                        student['name'],
+                        scoreDisplay,
                         style: GoogleFonts.lexend(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: textColor,
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: scoreColor,
                         ),
                       ),
                       Text(
-                        'ID: ${student['id']}',
+                        'Avg Score',
                         style: GoogleFonts.lexend(
                           fontSize: 12,
                           color: subTextColor,
@@ -453,84 +575,54 @@ class _StudentEvaluationScreenState extends State<StudentEvaluationScreen> {
                   ),
                 ],
               ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    '${student['score']}',
-                    style: GoogleFonts.lexend(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: scoreColor,
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.only(top: 12),
+                decoration: BoxDecoration(
+                  border: Border(
+                    top: BorderSide(
+                      color: isDarkMode
+                          ? borderColor.withValues(alpha: 0.5)
+                          : const Color(0xfff8fafc),
                     ),
                   ),
-                  Text(
-                    'Score',
-                    style: GoogleFonts.lexend(
-                      fontSize: 12,
-                      color: subTextColor,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        _buildStatusBadge(
+                          status,
+                          isFail
+                              ? Icons.error_outline_rounded
+                              : Icons.check_circle_rounded,
+                          isFail ? errorColor : successColor,
+                          isDarkMode,
+                        ),
+                      ],
                     ),
-                  ),
-                ],
+                    if (isFail)
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.cloud_off_rounded,
+                            color: warningColor,
+                            size: 16,
+                          ),
+                          const SizedBox(width: 8),
+                          _buildViewFeedbackButton(primaryColor),
+                        ],
+                      )
+                    else
+                      _buildViewFeedbackButton(primaryColor),
+                  ],
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.only(top: 12),
-            decoration: BoxDecoration(
-              border: Border(
-                top: BorderSide(
-                  color: isDarkMode
-                      ? borderColor.withOpacity(0.5)
-                      : const Color(0xfff8fafc),
-                ),
-              ),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    _buildStatusBadge(
-                      isFail ? 'Fail' : 'Pass',
-                      isFail
-                          ? Icons.error_outline_rounded
-                          : Icons.check_circle_rounded,
-                      isFail ? errorColor : successColor,
-                      isDarkMode,
-                    ),
-                    if (student['isEligible'] == true) ...[
-                      const SizedBox(width: 8),
-                      _buildStatusBadge(
-                        'Eligible',
-                        Icons.card_membership_rounded,
-                        primaryColor,
-                        isDarkMode,
-                        bgOpacity: 0.1,
-                      ),
-                    ],
-                  ],
-                ),
-                if (isFail)
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.cloud_off_rounded,
-                        color: warningColor,
-                        size: 16,
-                      ),
-                      const SizedBox(width: 8),
-                      _buildViewFeedbackButton(primaryColor),
-                    ],
-                  )
-                else
-                  _buildViewFeedbackButton(primaryColor),
-              ],
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -538,21 +630,20 @@ class _StudentEvaluationScreenState extends State<StudentEvaluationScreen> {
     String label,
     IconData icon,
     Color color,
-    bool isDarkMode, {
-    double bgOpacity = 0.1,
-  }) {
-    // Handling specific opacity for pass/fail to match HTML style
-    // HTML uses emerald-100 (light) / emerald-900/30 (dark)
-    // Here we approximate
-    Color bgColor = color.withOpacity(isDarkMode ? 0.2 : 0.1);
-    if (label == 'Pass')
+    bool isDarkMode,
+  ) {
+    Color bgColor = color.withValues(alpha: isDarkMode ? 0.2 : 0.1);
+    if (label == 'Pass') {
       bgColor = isDarkMode
-          ? const Color(0xff064e3b).withOpacity(0.4)
+          ? const Color(0xff064e3b).withValues(alpha: 0.4)
           : const Color(0xffd1fae5);
-    if (label == 'Fail')
+    }
+    if (label == 'Fail') {
       bgColor = isDarkMode
-          ? const Color(0xff881337).withOpacity(0.4)
+          ? const Color(0xff881337).withValues(alpha: 0.4)
           : const Color(0xffffe4e6);
+    }
+    if (label == 'N/A') bgColor = Colors.grey.withValues(alpha: 0.2);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -563,14 +654,14 @@ class _StudentEvaluationScreenState extends State<StudentEvaluationScreen> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 12, color: color),
+          Icon(icon, size: 12, color: label == 'N/A' ? Colors.grey : color),
           const SizedBox(width: 4),
           Text(
             label.toUpperCase(),
             style: GoogleFonts.lexend(
               fontSize: 10,
               fontWeight: FontWeight.bold,
-              color: color,
+              color: label == 'N/A' ? Colors.grey : color,
               letterSpacing: 0.5,
             ),
           ),
@@ -604,7 +695,7 @@ class _StudentEvaluationScreenState extends State<StudentEvaluationScreen> {
   ) {
     return Container(
       decoration: BoxDecoration(
-        color: surfaceColor.withOpacity(0.95),
+        color: surfaceColor.withValues(alpha: 0.95),
         border: Border(top: BorderSide(color: borderColor)),
       ),
       child: Column(
@@ -617,7 +708,7 @@ class _StudentEvaluationScreenState extends State<StudentEvaluationScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: primaryColor,
                 elevation: 4,
-                shadowColor: primaryColor.withOpacity(0.25),
+                shadowColor: primaryColor.withValues(alpha: 0.25),
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),

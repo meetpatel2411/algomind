@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'services/database_service.dart';
+
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:intl/intl.dart';
 
 class CreateExamScreen extends StatefulWidget {
   const CreateExamScreen({super.key});
@@ -22,8 +26,11 @@ class _CreateExamScreenState extends State<CreateExamScreen> {
   final TextEditingController _marksController = TextEditingController();
 
   // Selections
-  String _selectedClass = '10-A';
-  String _selectedSubject = 'Mathematics';
+  String? _selectedClassId;
+  String? _selectedClassName;
+  String? _selectedSubjectId;
+  String? _selectedSubjectName;
+  DateTime _selectedDate = DateTime.now();
 
   bool _isCreating = false;
 
@@ -39,22 +46,27 @@ class _CreateExamScreenState extends State<CreateExamScreen> {
   Future<void> _createExam() async {
     setState(() => _isCreating = true);
     try {
-      if (_titleController.text.isEmpty) {
+      if (_titleController.text.isEmpty ||
+          _selectedClassId == null ||
+          _selectedSubjectId == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please enter exam title')),
+          const SnackBar(content: Text('Please fill all required fields')),
         );
         return;
       }
 
       final examData = {
         'title': _titleController.text.trim(),
-        'class': _selectedClass, // In real app, store classId
-        'subject': _selectedSubject, // In real app, store subjectId
+        'classId': _selectedClassId,
+        'className': _selectedClassName,
+        'subjectId': _selectedSubjectId,
+        'subjectName': _selectedSubjectName,
         'duration': '${_durationController.text.trim()} Mins',
         'totalMarks': int.tryParse(_marksController.text.trim()) ?? 100,
         'status': 'Upcoming',
         'isOffline': _isOfflineAvailable,
-        'date': 'Oct 25, 2023', // Placeholder, should be selected date
+        'date': Timestamp.fromDate(_selectedDate),
+        'teacherId': FirebaseAuth.instance.currentUser?.uid,
       };
 
       await DatabaseService().createExam(examData, _questions);
@@ -153,8 +165,8 @@ class _CreateExamScreenState extends State<CreateExamScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: isDarkMode
-            ? backgroundDark.withOpacity(0.8)
-            : Colors.white.withOpacity(0.8),
+            ? backgroundDark.withValues(alpha: 0.8)
+            : Colors.white.withValues(alpha: 0.8),
         border: Border(
           bottom: BorderSide(
             color: isDarkMode ? Colors.white10 : const Color(0xffe2e8f0),
@@ -211,31 +223,163 @@ class _CreateExamScreenState extends State<CreateExamScreen> {
     Color textColor,
     Color subTextColor,
   ) {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return const SizedBox();
+
     return Column(
       children: [
         Row(
           children: [
             Expanded(
-              child: _buildDropdownField(
-                'Class',
-                ['10-A', '10-B', '11-C'],
-                surfaceColor,
-                borderColor,
-                subTextColor,
-                (val) => setState(() => _selectedClass = val!),
-                _selectedClass,
+              child: StreamBuilder<QuerySnapshot>(
+                stream: DatabaseService().getTeacherClasses(uid),
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData) {
+                    return _buildDropdownField(
+                      'Class',
+                      [],
+                      surfaceColor,
+                      borderColor,
+                      subTextColor,
+                      null,
+                      null,
+                    );
+                  }
+
+                  final classes = snapshot.data!.docs;
+                  final List<DropdownMenuItem<String>> items = classes.map((
+                    doc,
+                  ) {
+                    final data = doc.data() as Map<String, dynamic>;
+                    return DropdownMenuItem(
+                      value: doc.id,
+                      child: Text(data['name'] ?? 'Class'),
+                      onTap: () {
+                        setState(() => _selectedClassName = data['name']);
+                      },
+                    );
+                  }).toList();
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(left: 4, bottom: 4),
+                        child: Text(
+                          'Class',
+                          style: GoogleFonts.lexend(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: subTextColor,
+                          ),
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        decoration: BoxDecoration(
+                          color: surfaceColor,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: borderColor),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            value: _selectedClassId,
+                            hint: Text(
+                              'Select Class',
+                              style: GoogleFonts.lexend(color: subTextColor),
+                            ),
+                            icon: Icon(
+                              Icons.expand_more_rounded,
+                              color: subTextColor.withValues(alpha: 0.5),
+                            ),
+                            isExpanded: true,
+                            style: GoogleFonts.lexend(
+                              fontSize: 14,
+                              color: subTextColor,
+                            ),
+                            onChanged: (val) {
+                              setState(() {
+                                _selectedClassId = val;
+                                _selectedSubjectId = null; // Reset subject
+                              });
+                            },
+                            items: items,
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                },
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: _buildDropdownField(
-                'Subject',
-                ['Mathematics', 'Physics', 'Chemistry'],
-                surfaceColor,
-                borderColor,
-                subTextColor,
-                (val) => setState(() => _selectedSubject = val!),
-                _selectedSubject,
+              child: StreamBuilder<QuerySnapshot>(
+                stream: DatabaseService().getSubjects(_selectedClassId),
+                builder: (context, snapshot) {
+                  List<DropdownMenuItem<String>> items = [];
+                  if (snapshot.hasData) {
+                    items = snapshot.data!.docs.map((doc) {
+                      final data = doc.data() as Map<String, dynamic>;
+                      return DropdownMenuItem(
+                        value: doc.id,
+                        child: Text(data['name'] ?? 'Subject'),
+                        onTap: () {
+                          setState(() => _selectedSubjectName = data['name']);
+                        },
+                      );
+                    }).toList();
+                  }
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(left: 4, bottom: 4),
+                        child: Text(
+                          'Subject',
+                          style: GoogleFonts.lexend(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: subTextColor,
+                          ),
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        decoration: BoxDecoration(
+                          color: surfaceColor,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: borderColor),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            value: _selectedSubjectId,
+                            hint: Text(
+                              'Select Subject',
+                              style: GoogleFonts.lexend(color: subTextColor),
+                            ),
+                            icon: Icon(
+                              Icons.expand_more_rounded,
+                              color: subTextColor.withValues(alpha: 0.5),
+                            ),
+                            isExpanded: true,
+                            style: GoogleFonts.lexend(
+                              fontSize: 14,
+                              color: subTextColor,
+                            ),
+                            onChanged: _selectedClassId == null
+                                ? null
+                                : (val) {
+                                    setState(() => _selectedSubjectId = val);
+                                  },
+                            items: items,
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                },
               ),
             ),
           ],
@@ -248,6 +392,65 @@ class _CreateExamScreenState extends State<CreateExamScreen> {
           borderColor,
           subTextColor,
           controller: _titleController,
+        ),
+        const SizedBox(height: 16),
+        // Date Picker
+        InkWell(
+          onTap: () async {
+            final DateTime? picked = await showDatePicker(
+              context: context,
+              firstDate: DateTime.now(),
+              lastDate: DateTime.now().add(const Duration(days: 365)),
+              initialDate: _selectedDate,
+            );
+            if (picked != null && picked != _selectedDate) {
+              setState(() {
+                _selectedDate = picked;
+              });
+            }
+          },
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(left: 4, bottom: 4),
+                child: Text(
+                  'Exam Date',
+                  style: GoogleFonts.lexend(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: subTextColor,
+                  ),
+                ),
+              ),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+                decoration: BoxDecoration(
+                  color: surfaceColor,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: borderColor),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      DateFormat('MMM dd, yyyy').format(_selectedDate),
+                      style: GoogleFonts.lexend(fontSize: 14, color: textColor),
+                    ),
+                    Icon(
+                      Icons.calendar_today_rounded,
+                      size: 16,
+                      color: subTextColor,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
         const SizedBox(height: 16),
         Row(
@@ -316,7 +519,7 @@ class _CreateExamScreenState extends State<CreateExamScreen> {
               value: value ?? options[0],
               icon: Icon(
                 Icons.expand_more_rounded,
-                color: subTextColor.withOpacity(0.5),
+                color: subTextColor.withValues(alpha: 0.5),
               ),
               isExpanded: true,
               style: GoogleFonts.lexend(fontSize: 14, color: subTextColor),
@@ -371,7 +574,7 @@ class _CreateExamScreenState extends State<CreateExamScreen> {
             decoration: InputDecoration(
               hintText: hint,
               hintStyle: GoogleFonts.lexend(
-                color: subTextColor.withOpacity(0.4),
+                color: subTextColor.withValues(alpha: 0.4),
               ),
               border: InputBorder.none,
               contentPadding: const EdgeInsets.symmetric(vertical: 12),
@@ -397,7 +600,7 @@ class _CreateExamScreenState extends State<CreateExamScreen> {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
           decoration: BoxDecoration(
-            color: primaryColor.withOpacity(0.1),
+            color: primaryColor.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Text(
@@ -477,7 +680,7 @@ class _CreateExamScreenState extends State<CreateExamScreen> {
                 icon: Icon(
                   Icons.delete_outline_rounded,
                   size: 20,
-                  color: subTextColor.withOpacity(0.5),
+                  color: subTextColor.withValues(alpha: 0.5),
                 ),
                 splashRadius: 20,
                 padding: EdgeInsets.zero,
@@ -500,7 +703,7 @@ class _CreateExamScreenState extends State<CreateExamScreen> {
                     ? 'Enter your question here...'
                     : 'Explain the theory of...',
                 hintStyle: GoogleFonts.lexend(
-                  color: subTextColor.withOpacity(0.4),
+                  color: subTextColor.withValues(alpha: 0.4),
                 ),
                 border: InputBorder.none,
                 isDense: true,
@@ -567,7 +770,7 @@ class _CreateExamScreenState extends State<CreateExamScreen> {
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: primaryColor.withOpacity(0.2),
+                    color: primaryColor.withValues(alpha: 0.2),
                     blurRadius: 4,
                     offset: const Offset(0, 2),
                   ),
@@ -613,7 +816,7 @@ class _CreateExamScreenState extends State<CreateExamScreen> {
             style: GoogleFonts.lexend(
               fontSize: 10,
               fontWeight: FontWeight.bold,
-              color: isSelected ? primaryColor : subTextColor.withOpacity(0.5),
+              color: isSelected ? primaryColor : subTextColor.withValues(alpha: 0.5),
             ),
           ),
         ),
@@ -628,7 +831,7 @@ class _CreateExamScreenState extends State<CreateExamScreen> {
               decoration: InputDecoration(
                 hintText: hint,
                 hintStyle: GoogleFonts.lexend(
-                  color: subTextColor.withOpacity(0.4),
+                  color: subTextColor.withValues(alpha: 0.4),
                 ),
                 border: InputBorder.none,
                 isDense: true,
@@ -666,7 +869,7 @@ class _CreateExamScreenState extends State<CreateExamScreen> {
           children: [
             Icon(
               Icons.add_circle_outline_rounded,
-              color: subTextColor.withOpacity(0.6),
+              color: subTextColor.withValues(alpha: 0.6),
               size: 20,
             ),
             const SizedBox(width: 8),
@@ -675,7 +878,7 @@ class _CreateExamScreenState extends State<CreateExamScreen> {
               style: GoogleFonts.lexend(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
-                color: subTextColor.withOpacity(0.6),
+                color: subTextColor.withValues(alpha: 0.6),
               ),
             ),
           ],
@@ -733,7 +936,7 @@ class _CreateExamScreenState extends State<CreateExamScreen> {
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
       decoration: BoxDecoration(
-        color: surfaceColor.withOpacity(0.9),
+        color: surfaceColor.withValues(alpha: 0.9),
         border: Border(top: BorderSide(color: borderColor)),
       ),
       child: Material(

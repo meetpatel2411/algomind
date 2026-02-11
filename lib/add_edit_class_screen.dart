@@ -196,9 +196,7 @@ class _AddEditClassScreenState extends State<AddEditClassScreen> {
         ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     } finally {
-      if (mounted) {
-        setState(() => _isSaving = false);
-      }
+      if (mounted) setState(() => _isSaving = false);
     }
   }
 
@@ -464,7 +462,9 @@ class _AddEditClassScreenState extends State<AddEditClassScreen> {
           style: GoogleFonts.lexend(color: textColor),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: GoogleFonts.lexend(color: subTextColor.withOpacity(0.5)),
+            hintStyle: GoogleFonts.lexend(
+              color: subTextColor.withValues(alpha: 0.5),
+            ),
             prefixIcon: Icon(icon, color: primaryColor),
             filled: true,
             fillColor: surfaceColor,

@@ -6,6 +6,7 @@ import 'widgets/teacher_bottom_navigation.dart';
 import 'create_exam_screen.dart';
 import 'widgets/profile_image.dart';
 import 'exam_details_screen.dart';
+import 'exam_results_screen.dart';
 
 class ManageExamsScreen extends StatefulWidget {
   const ManageExamsScreen({super.key});
@@ -62,10 +63,11 @@ class _ManageExamsScreenState extends State<ManageExamsScreen> {
                         _buildFilterPills(subTextColor),
                         const SizedBox(height: 24),
                         StreamBuilder<QuerySnapshot>(
-                          stream: DatabaseService().getExams(),
+                          stream: DatabaseService().getTeacherExams(''),
                           builder: (context, snapshot) {
-                            if (snapshot.hasError)
+                            if (snapshot.hasError) {
                               return Text('Error: ${snapshot.error}');
+                            }
                             if (snapshot.connectionState ==
                                 ConnectionState.waiting) {
                               return const Center(
@@ -95,8 +97,13 @@ class _ManageExamsScreenState extends State<ManageExamsScreen> {
                               itemBuilder: (context, index) {
                                 final data =
                                     exams[index].data() as Map<String, dynamic>;
+                                // Add ID to data map for passing downstream
+                                final examWithId = {
+                                  ...data,
+                                  'id': exams[index].id,
+                                };
                                 return _buildExamCard(
-                                  data,
+                                  examWithId,
                                   surfaceColor,
                                   borderColor,
                                   textColor,
@@ -151,8 +158,8 @@ class _ManageExamsScreenState extends State<ManageExamsScreen> {
       padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
       decoration: BoxDecoration(
         color: isDarkMode
-            ? backgroundDark.withOpacity(0.8)
-            : backgroundLight.withOpacity(0.8),
+            ? backgroundDark.withValues(alpha: 0.8)
+            : backgroundLight.withValues(alpha: 0.8),
         border: Border(
           bottom: BorderSide(
             color: isDarkMode ? Colors.white10 : const Color(0xffe2e8f0),
@@ -179,7 +186,7 @@ class _ManageExamsScreenState extends State<ManageExamsScreen> {
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      color: primaryColor.withOpacity(0.1),
+                      color: primaryColor.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
@@ -192,7 +199,7 @@ class _ManageExamsScreenState extends State<ManageExamsScreen> {
                   ProfileImage(
                     imageUrl:
                         'https://lh3.googleusercontent.com/aida-public/AB6AXuB8RoccHkfm2u4VVnSS5eo8dQPDBqPv87nYeYRyxh69SLXZM734PIJYe6mYavQupcXOWTB0xN7mpkzyURhE8eFHf0LwTn59iXth6tcA5EC73nfxTuJWOQozZaQuDRCnT4evJMiIWCFQN0IxTPBzpn3IfFmHvMWjfHuSGfBBgxqs9mJ522s2udLsfth2wrIdisWAajjV0Xt9INcbiyhP4C8jTA_ovabeQJ_STvIyy68IQpGG1JQRkEiHK04kF5B3B4hxDf7QwuMfBjc',
-                    borderColor: primaryColor.withOpacity(0.2),
+                    borderColor: primaryColor.withValues(alpha: 0.2),
                     borderWidth: 2,
                   ),
                 ],
@@ -203,8 +210,8 @@ class _ManageExamsScreenState extends State<ManageExamsScreen> {
           Container(
             decoration: BoxDecoration(
               color: isDarkMode
-                  ? Colors.white.withOpacity(0.05)
-                  : Colors.black.withOpacity(0.05),
+                  ? Colors.white.withValues(alpha: 0.05)
+                  : Colors.black.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(16),
             ),
             child: TextField(
@@ -212,11 +219,11 @@ class _ManageExamsScreenState extends State<ManageExamsScreen> {
               decoration: InputDecoration(
                 hintText: 'Search exams or classes...',
                 hintStyle: GoogleFonts.lexend(
-                  color: subTextColor.withOpacity(0.5),
+                  color: subTextColor.withValues(alpha: 0.5),
                 ),
                 prefixIcon: Icon(
                   Icons.search_rounded,
-                  color: subTextColor.withOpacity(0.5),
+                  color: subTextColor.withValues(alpha: 0.5),
                 ),
                 border: InputBorder.none,
                 contentPadding: const EdgeInsets.symmetric(vertical: 12),
@@ -281,11 +288,11 @@ class _ManageExamsScreenState extends State<ManageExamsScreen> {
     switch (exam['status']) {
       case 'Ongoing':
         statusColor = const Color(0xff10b981);
-        statusBgColor = const Color(0xff10b981).withOpacity(0.1);
+        statusBgColor = const Color(0xff10b981).withValues(alpha: 0.1);
         break;
       case 'Upcoming':
         statusColor = primaryColor;
-        statusBgColor = primaryColor.withOpacity(0.1);
+        statusBgColor = primaryColor.withValues(alpha: 0.1);
         break;
       default:
         statusColor = subTextColor;
@@ -299,7 +306,7 @@ class _ManageExamsScreenState extends State<ManageExamsScreen> {
         border: Border.all(color: borderColor),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 20,
             offset: const Offset(0, 4),
           ),
@@ -394,7 +401,7 @@ class _ManageExamsScreenState extends State<ManageExamsScreen> {
                             Icon(
                               Icons.calendar_today_outlined,
                               size: 14,
-                              color: subTextColor.withOpacity(0.5),
+                              color: subTextColor.withValues(alpha: 0.5),
                             ),
                             const SizedBox(width: 6),
                             Text(
@@ -414,7 +421,7 @@ class _ManageExamsScreenState extends State<ManageExamsScreen> {
                             Icon(
                               Icons.timer_outlined,
                               size: 14,
-                              color: subTextColor.withOpacity(0.5),
+                              color: subTextColor.withValues(alpha: 0.5),
                             ),
                             const SizedBox(width: 6),
                             Text(
@@ -437,7 +444,7 @@ class _ManageExamsScreenState extends State<ManageExamsScreen> {
           Container(
             padding: const EdgeInsets.symmetric(vertical: 12),
             color: isDarkMode
-                ? Colors.white.withOpacity(0.02)
+                ? Colors.white.withValues(alpha: 0.02)
                 : const Color(0xfff8fafc),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -461,6 +468,14 @@ class _ManageExamsScreenState extends State<ManageExamsScreen> {
                   Icons.analytics_outlined,
                   'Results',
                   enabled: exam['status'] != 'Upcoming',
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ExamResultsScreen(examData: exam),
+                      ),
+                    );
+                  },
                 ),
               ],
             ),

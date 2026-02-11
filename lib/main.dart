@@ -1,8 +1,13 @@
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 // import 'firebase_options.dart'; // TODO: Uncomment when generated
 import 'login_screen.dart';
+import 'student_dashboard.dart';
+import 'teacher_dashboard.dart';
+import 'services/auth_service.dart';
 import 'services/connectivity_service.dart';
+import 'services/theme_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -10,6 +15,7 @@ void main() async {
     // options: DefaultFirebaseOptions.currentPlatform, // TODO: Uncomment when generated
   );
   ConnectivityService().initialize();
+  await ThemeService().loadTheme(); // Load saved theme preference
   runApp(const MyApp());
 }
 
@@ -19,27 +25,84 @@ class MyApp extends StatelessWidget {
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'RouteMinds',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xff0f68e6),
-          primary: const Color(0xff0f68e6),
-        ),
-        useMaterial3: true,
-      ),
-      darkTheme: ThemeData(
-        brightness: Brightness.dark,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xff0f68e6),
-          primary: const Color(0xff0f68e6),
-          brightness: Brightness.dark,
-        ),
-        useMaterial3: true,
-      ),
-      themeMode: ThemeMode.system,
-      home: const LoginScreen(),
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: ThemeService().themeMode,
+      builder: (context, themeMode, _) {
+        return MaterialApp(
+          title: 'RouteMinds',
+          debugShowCheckedModeBanner: false,
+          theme: ThemeData(
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: const Color(0xff0f68e6),
+              primary: const Color(0xff0f68e6),
+            ),
+            useMaterial3: true,
+          ),
+          darkTheme: ThemeData(
+            brightness: Brightness.dark,
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: const Color(0xff0f68e6),
+              primary: const Color(0xff0f68e6),
+              brightness: Brightness.dark,
+            ),
+            useMaterial3: true,
+          ),
+          themeMode: themeMode,
+          home: const AuthWrapper(),
+        );
+      },
+    );
+  }
+}
+
+class AuthWrapper extends StatelessWidget {
+  const AuthWrapper({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        if (snapshot.hasData && snapshot.data != null) {
+          return FutureBuilder<List<ScheduledUser>>(
+            future: AuthService().getStoredUsers(),
+            builder: (context, userSnapshot) {
+              if (userSnapshot.connectionState == ConnectionState.waiting) {
+                return const Scaffold(
+                  body: Center(child: CircularProgressIndicator()),
+                );
+              }
+
+              final String uid = snapshot.data!.uid;
+              final users = userSnapshot.data ?? [];
+              final currentUser = users.firstWhere(
+                (u) => u.uid == uid,
+                orElse: () => ScheduledUser(
+                  uid: uid,
+                  fullName: 'User',
+                  email: snapshot.data!.email ?? '',
+                  role: 'student', // Default role
+                  lastLogin: DateTime.now(),
+                ),
+              );
+
+              if (currentUser.role == 'student') {
+                return const StudentDashboard();
+              } else {
+                return TeacherDashboard(uid: uid);
+              }
+            },
+          );
+        }
+
+        return const LoginScreen();
+      },
     );
   }
 }

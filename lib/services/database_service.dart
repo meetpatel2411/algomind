@@ -40,6 +40,11 @@ class DatabaseService {
     return users.where('role', isEqualTo: 'student').snapshots();
   }
 
+  // Update user profile
+  Future<void> updateUserProfile(String uid, Map<String, dynamic> data) async {
+    await users.doc(uid).update(data);
+  }
+
   Stream<QuerySnapshot> getStudentsByClass(String classId) {
     return users
         .where('role', isEqualTo: 'student')
@@ -209,7 +214,7 @@ class DatabaseService {
   Stream<QuerySnapshot> getStudentAttendanceHistory(String studentId) {
     return attendance
         .where('studentId', isEqualTo: studentId)
-        .orderBy('date', descending: true)
+        // .orderBy('date', descending: true)
         .snapshots();
   }
 
@@ -231,7 +236,8 @@ class DatabaseService {
   // --- EXAM METHODS ---
 
   Stream<QuerySnapshot> getExams() {
-    return exams.orderBy('createdAt', descending: true).snapshots();
+    return exams
+        .snapshots(); // .orderBy('createdAt', descending: true).snapshots();
   }
 
   Future<void> createExam(
@@ -256,15 +262,61 @@ class DatabaseService {
     await batch.commit();
   }
 
-  Future<void> submitExamResult(
+  // Get exams for a specific class (Student View)
+
+  Stream<QuerySnapshot> getExamsForClass(String classId) {
+    return exams
+        .where('classId', isEqualTo: classId)
+        // .orderBy('date', descending: true)
+        .snapshots();
+  }
+
+  // Get all exams for a teacher (Teacher View)
+  // Get all exams for a teacher (Teacher View)
+  Stream<QuerySnapshot> getTeacherExams(String teacherId) {
+    return exams
+        .where('teacherId', isEqualTo: teacherId)
+        // .orderBy('date', descending: true)
+        .snapshots();
+  }
+
+  // Get results for a specific exam (Teacher View)
+  Stream<QuerySnapshot> getExamResults(String examId) {
+    return exams.doc(examId).collection('submissions').snapshots();
+  }
+
+  // Get all exam results for a student (Analytics)
+  // Note: This requires a collectionGroup index if 'submissions' is a subcollection of exams
+  // OR we can query exams where classId == studentClassId and then fetch their individual submission
+  // A better structure for querying "all my results" might be to duplicate the result to a top-level 'results' collection
+  // or 'users/{uid}/results'.
+  // For now, let's use a Collection Group query which is powerful.
+  Stream<QuerySnapshot> getStudentExamResults(String studentId) {
+    return _db
+        .collectionGroup('submissions')
+        .where('studentId', isEqualTo: studentId)
+        // .orderBy('submittedAt', descending: true)
+        .snapshots();
+  }
+
+  Future<void> submitExamResults(
     String examId,
-    String studentId,
-    Map<String, dynamic> resultData,
+    List<Map<String, dynamic>> results,
   ) async {
-    await exams.doc(examId).collection('submissions').doc(studentId).set({
-      ...resultData,
-      'submittedAt': FieldValue.serverTimestamp(),
-    });
+    WriteBatch batch = _db.batch();
+
+    // Calculate total class average stats if needed, but for now just save individual results
+
+    for (var result in results) {
+      DocumentReference ref = exams
+          .doc(examId)
+          .collection('submissions')
+          .doc(result['studentId']); // Use studentId as doc ID for easy lookup
+
+      batch.set(ref, {...result, 'submittedAt': FieldValue.serverTimestamp()});
+    }
+
+    await batch.commit();
   }
 
   // --- TEACHER STATS & UTILS ---
@@ -285,9 +337,24 @@ class DatabaseService {
 
   // Get active exams count
   Stream<int> getActiveExamsCount(String teacherId) {
-    // For now, returning count of all exams.
-    // In a real app with 'creatorId' or 'teacherId' on exams, filter by that.
-    return exams.snapshots().map((snapshot) => snapshot.docs.length);
+    return exams
+        .where('teacherId', isEqualTo: teacherId)
+        .snapshots()
+        .map((snapshot) => snapshot.docs.length);
+  }
+
+  // Get count of ungraded exams (Pending Eval)
+  // An exam is "ungraded" if it has passed its date but has no submissions?
+  // Or simpler: Just count exams locally that are in the past.
+  // For now, let's just count *all* exams for the teacher as "Active".
+  // And for "Pending Eval", let's count exams that are completed (date < now).
+  // This is a rough proxy but works for the prototype.
+  Stream<int> getPendingEvaluationsCount(String teacherId) {
+    return exams
+        .where('teacherId', isEqualTo: teacherId)
+        .where('date', isLessThan: Timestamp.now())
+        .snapshots()
+        .map((snapshot) => snapshot.docs.length);
   }
 
   // Check if teacher has any classes (for auto-seed check)

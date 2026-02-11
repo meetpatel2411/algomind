@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'services/database_service.dart';
+import 'settings_screen.dart'; // Added import for SettingsScreen
 
 import 'widgets/teacher_bottom_navigation.dart';
 import 'manage_students_screen.dart';
@@ -10,6 +11,8 @@ import 'teaching_schedule_screen.dart';
 import 'attendance_screen.dart';
 import 'student_evaluation_screen.dart';
 import 'widgets/profile_image.dart';
+import 'create_exam_screen.dart';
+import 'manage_exams_screen.dart';
 
 class TeacherDashboard extends StatefulWidget {
   final String? uid;
@@ -24,15 +27,6 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
   final Color backgroundLight = const Color(0xfff6f7f8);
   final Color backgroundDark = const Color(0xff101722);
   final Color successColor = const Color(0xff10b981);
-
-  // int _selectedIndex = 0; // Removed as TeacherBottomNavigation is stateless-ish in usage here,
-  // but actually TeacherDashboard needs to know it is index 0.
-  // The widget takes currentIndex.
-  // The navigation logic is now in the widget.
-  // So we don't need _selectedIndex state if we are just displaying the dashboard content.
-  // However, the dashboard logic might have used _selectedIndex for other things?
-  // Looking at the code, _selectedIndex was only used for the bottom nav highlighting.
-  // So we can remove it or ignore it.
 
   @override
   Widget build(BuildContext context) {
@@ -116,7 +110,9 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
                                   borderRadius: BorderRadius.circular(20),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: primaryColor.withOpacity(0.3),
+                                      color: primaryColor.withValues(
+                                        alpha: 0.3,
+                                      ),
                                       blurRadius: 12,
                                       offset: const Offset(0, 8),
                                     ),
@@ -127,13 +123,43 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
                                     Container(
                                       padding: const EdgeInsets.all(12),
                                       decoration: BoxDecoration(
-                                        color: Colors.white.withOpacity(0.2),
+                                        color: Colors.white.withValues(
+                                          alpha: 0.2,
+                                        ),
                                         borderRadius: BorderRadius.circular(12),
                                       ),
                                       child: const Icon(
                                         Icons.notifications_active_rounded,
                                         color: Colors.white,
                                         size: 28,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    GestureDetector(
+                                      onTap: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) =>
+                                                const SettingsScreen(),
+                                          ),
+                                        );
+                                      },
+                                      child: Container(
+                                        padding: const EdgeInsets.all(12),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white.withValues(
+                                            alpha: 0.2,
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                        ),
+                                        child: const Icon(
+                                          Icons.settings_rounded,
+                                          color: Colors.white,
+                                          size: 28,
+                                        ),
                                       ),
                                     ),
                                     const SizedBox(width: 16),
@@ -155,8 +181,8 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
                                             'Today, 2:00 PM • Conf. Room',
                                             style: GoogleFonts.lexend(
                                               fontSize: 13,
-                                              color: Colors.white.withOpacity(
-                                                0.9,
+                                              color: Colors.white.withValues(
+                                                alpha: 0.9,
                                               ),
                                             ),
                                           ),
@@ -219,8 +245,9 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
                                       '',
                                 ),
                                 builder: (context, snapshot) {
-                                  if (snapshot.hasError)
+                                  if (snapshot.hasError) {
                                     return Text('Error: ${snapshot.error}');
+                                  }
                                   if (snapshot.connectionState ==
                                       ConnectionState.waiting) {
                                     return const Center(
@@ -243,8 +270,8 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
                                           Icon(
                                             Icons.class_outlined,
                                             size: 48,
-                                            color: subTextColor.withOpacity(
-                                              0.5,
+                                            color: subTextColor.withValues(
+                                              alpha: 0.5,
                                             ),
                                           ),
                                           const SizedBox(height: 16),
@@ -270,9 +297,6 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
                                             onPressed: () async {
                                               // Trigger Seed
                                               try {
-                                                // Using SeedService from here directly or separate utility
-                                                // Assuming SeedService is available or import it
-                                                // We need to import seed_service.dart
                                                 ScaffoldMessenger.of(
                                                   context,
                                                 ).showSnackBar(
@@ -282,11 +306,6 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
                                                     ),
                                                   ),
                                                 );
-                                                // We should ideally call a method that just ensures this teacher has data
-                                                // reusing SeedService.seedDatabase() for now which handles full seed
-                                                // or create a specific one.
-                                                // For now, I'll assume SeedService is imported and use it.
-                                                // I need to add import 'services/seed_service.dart';
                                               } catch (e) {
                                                 ScaffoldMessenger.of(
                                                   context,
@@ -391,8 +410,6 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
     }
   }
 
-  // Removed _buildStatusBar
-
   Widget _buildHeader(Color textColor, Color subTextColor, bool isDarkMode) {
     final String? uid = widget.uid ?? FirebaseAuth.instance.currentUser?.uid;
     return Padding(
@@ -438,7 +455,7 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
                   ProfileImage(
                     imageUrl: imageUrl,
                     size: 48,
-                    borderColor: primaryColor.withOpacity(0.2),
+                    borderColor: primaryColor.withValues(alpha: 0.2),
                     borderWidth: 2,
                   ),
                   Positioned(
@@ -486,7 +503,6 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
         children: [
           // Total Students Stream
           StreamBuilder<int>(
-            // stream: DatabaseService().getTeacherStudentCount(uid), // Old logic using class metadata
             stream: DatabaseService()
                 .getAllStudentsCount(), // Use global count as requested
             builder: (context, snapshot) {
@@ -495,7 +511,7 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
                 count.toString().padLeft(2, '0'),
                 'Total Students',
                 Icons.groups_rounded,
-                primaryColor.withOpacity(0.1),
+                primaryColor.withValues(alpha: 0.1),
                 primaryColor,
                 surfaceColor,
                 borderColor,
@@ -524,16 +540,23 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
           ),
 
           const SizedBox(width: 16),
-          // Pending Eval (Hardcoded for now as logic is complex)
-          _buildStatCard(
-            '18',
-            'Pending Eval.',
-            Icons.pending_actions_rounded,
-            const Color(0xfff5f3ff),
-            const Color(0xff7c3aed),
-            surfaceColor,
-            borderColor,
-            subTextColor,
+          const SizedBox(width: 16),
+          // Pending Eval (Ungraded/Past Exams)
+          StreamBuilder<int>(
+            stream: DatabaseService().getPendingEvaluationsCount(uid),
+            builder: (context, snapshot) {
+              final count = snapshot.data ?? 0;
+              return _buildStatCard(
+                count.toString().padLeft(2, '0'),
+                'Pending Eval.',
+                Icons.pending_actions_rounded,
+                const Color(0xfff5f3ff),
+                const Color(0xff7c3aed),
+                surfaceColor,
+                borderColor,
+                subTextColor,
+              );
+            },
           ),
         ],
       ),
@@ -559,7 +582,7 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
         border: Border.all(color: borderColor),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: Colors.black.withValues(alpha: 0.02),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -650,6 +673,12 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
           false,
           surfaceColor,
           borderColor,
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const CreateExamScreen()),
+            );
+          },
         ),
         _buildActionCard(
           'Courses',
@@ -659,6 +688,14 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
           false,
           surfaceColor,
           borderColor,
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const ManageExamsScreen(),
+              ),
+            );
+          },
         ),
         _buildActionCard(
           'Timetable',
@@ -716,14 +753,14 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
         boxShadow: isPrimary
             ? [
                 BoxShadow(
-                  color: bgColor.withOpacity(0.2),
+                  color: bgColor.withValues(alpha: 0.2),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 ),
               ]
             : [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.02),
+                  color: Colors.black.withValues(alpha: 0.02),
                   blurRadius: 4,
                   offset: const Offset(0, 2),
                 ),
@@ -757,7 +794,7 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
 
   Widget _buildTodayClassItem(
     String subject,
-    String details,
+    String time,
     String room,
     IconData icon,
     Color surfaceColor,
@@ -771,23 +808,16 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
         color: surfaceColor,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: borderColor),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: primaryColor.withOpacity(0.1),
+              color: const Color(0xff0f68e6).withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(icon, color: primaryColor),
+            child: Icon(icon, color: const Color(0xff0f68e6)),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -797,26 +827,40 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
                 Text(
                   subject,
                   style: GoogleFonts.lexend(
-                    fontSize: 14,
+                    fontSize: 16,
                     fontWeight: FontWeight.bold,
                     color: textColor,
                   ),
                 ),
+                const SizedBox(height: 4),
                 Text(
-                  details,
-                  style: GoogleFonts.lexend(fontSize: 12, color: subTextColor),
+                  time,
+                  style: GoogleFonts.lexend(fontSize: 14, color: subTextColor),
                 ),
               ],
             ),
           ),
-          Text(
-            room,
-            style: GoogleFonts.lexend(
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
-              color: subTextColor.withOpacity(0.6),
-              letterSpacing: 0.5,
-            ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                room,
+                style: GoogleFonts.lexend(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: textColor,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'On Time',
+                style: GoogleFonts.lexend(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: const Color(0xff10b981),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -829,8 +873,37 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
     bool isDarkMode,
     Color borderColor,
   ) {
-    return TeacherBottomNavigation(currentIndex: 0, isDarkMode: isDarkMode);
+    return TeacherBottomNavigation(
+      currentIndex: 0,
+      onTap: (index) {
+        if (index == 0) return;
+        if (index == 1) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const ManageStudentsScreen(),
+            ),
+          );
+        } else if (index == 2) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const AttendanceScreen()),
+          );
+        } else if (index == 3) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const TeachingScheduleScreen(),
+            ),
+          );
+        } else if (index == 4) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const ManageExamsScreen()),
+          );
+        }
+      },
+      isDarkMode: isDarkMode,
+    );
   }
-
-  // Removed _buildNavItem as it is now in TeacherBottomNavigation
 }

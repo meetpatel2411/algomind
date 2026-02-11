@@ -252,7 +252,7 @@ class _ChapterExamScreenState extends State<ChapterExamScreen> {
                       vertical: 6,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.red.withOpacity(0.1),
+                      color: Colors.red.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Row(
@@ -376,7 +376,7 @@ class _ChapterExamScreenState extends State<ChapterExamScreen> {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: isSelected
-              ? primaryColor.withOpacity(isDarkMode ? 0.1 : 0.05)
+              ? primaryColor.withValues(alpha: isDarkMode ? 0.1 : 0.05)
               : (isDarkMode ? const Color(0xff1e293b) : Colors.white),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
@@ -544,7 +544,7 @@ class _ChapterExamScreenState extends State<ChapterExamScreen> {
                 width: 120,
                 height: 120,
                 decoration: BoxDecoration(
-                  color: primaryColor.withOpacity(0.1),
+                  color: primaryColor.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Center(

@@ -1,6 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 
 class SeedService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -12,206 +11,72 @@ class SeedService {
       await _clearCollection('classes');
       await _clearCollection('subjects');
       await _clearCollection('timetable');
-      // Note: chapters are subcollections, will be cleared when parent subjects are deleted or need specific handling if top-level.
-      // Since we clear subjects, if chapters are subcollections, they are "orphan" but reachable?
-      // Firestore subcollections strictly speaking persist but are hard to find without parent.
-      // Ideally we should recursively delete, but for seeding purpose, just creating new is fine as distinct IDs.
+      await _clearCollection('attendance');
+      await _clearCollection('attendance_sessions');
+      await _clearCollection('exams');
 
       WriteBatch batch = _db.batch();
 
-      // --- 1. USERS ---
-
-      // Teacher: Mr. Smith
-      String teacherId;
-      String email = 'smith@routeminds.app';
-      String password = 'password123';
-
-      User? currentUser = FirebaseAuth.instance.currentUser;
-      if (currentUser != null && currentUser.email == email) {
-        teacherId = currentUser.uid;
-      } else {
-        try {
-          UserCredential cred = await FirebaseAuth.instance
-              .signInWithEmailAndPassword(email: email, password: password);
-          teacherId = cred.user!.uid;
-        } on FirebaseAuthException catch (e) {
-          if (e.code == 'user-not-found' || e.code == 'invalid-credential') {
-            UserCredential cred = await FirebaseAuth.instance
-                .createUserWithEmailAndPassword(
-                  email: email,
-                  password: password,
-                );
-            teacherId = cred.user!.uid;
-          } else {
-            rethrow;
-          }
-        }
-      }
-
-      DocumentReference teacherRef = _db.collection('users').doc(teacherId);
-      batch.set(teacherRef, {
+      // --- 1. TEACHER ---
+      String teacherId = 'teacher_123';
+      batch.set(_db.collection('users').doc(teacherId), {
         'uid': teacherId,
-        'fullName': 'Mr. Smith',
-        'username': 'mr_smith',
-        'email': email,
-        'role': 'teacher',
-        'createdAt': FieldValue.serverTimestamp(),
-      });
-
-      // --- 2. CLASSES ---
-
-      // Grade 12-A
-      DocumentReference class12ARef = _db.collection('classes').doc();
-      String class12AId = class12ARef.id;
-      batch.set(class12ARef, {
-        'name': 'Grade 12',
-        'section': 'A',
-        'academicYear': '2023-2024',
-        'teacherId': teacherId,
-        'studentCount': 2, // Initial count
-      });
-
-      // Grade 11-B
-      DocumentReference class11BRef = _db.collection('classes').doc();
-      String class11BId = class11BRef.id;
-      batch.set(class11BRef, {
-        'name': 'Grade 11',
-        'section': 'B',
-        'academicYear': '2023-2024',
-        'teacherId': teacherId,
-        'studentCount': 0,
-      });
-
-      // --- 3. STUDENTS ---
-
-      // Alexandria Rivers (Student G12-A)
-      DocumentReference studentAlexRef = _db.collection('users').doc();
-      // Ideally we create Auth for students too, but for demo we can just create Firestore entries
-      // or if "Demo Student" button uses a fixed ID, we should use that.
-      // Checking previously set "fixed ID" logic (student_123).
-      // I'll set Alexandria as 'student_123' so the Demo Login works.
-
-      String alexId = 'student_123';
-      studentAlexRef = _db.collection('users').doc(alexId);
-
-      batch.set(studentAlexRef, {
-        'uid': alexId,
-        'fullName': 'Alexandria Rivers',
-        'username': 'alexandria',
-        'email': 'alexandria@routeminds.app',
-        'role': 'student',
-        'classId': class12AId,
-        'createdAt': FieldValue.serverTimestamp(),
-      });
-
-      // Marcus Sterling (Student G12-A)
-      DocumentReference studentMarcusRef = _db.collection('users').doc();
-      batch.set(studentMarcusRef, {
-        'uid': studentMarcusRef.id,
-        'fullName': 'Marcus Sterling',
-        'username': 'marcus',
-        'email': 'marcus@routeminds.app',
-        'role': 'student',
-        'classId': class12AId,
-        'createdAt': FieldValue.serverTimestamp(),
-      });
-
-      // --- 4. SUBJECTS ---
-
-      // Advanced Physics (Grade 12-A)
-      DocumentReference physRef = _db.collection('subjects').doc();
-      String physId = physRef.id;
-      batch.set(physRef, {
-        'name': 'Advanced Physics',
-        'slug': 'adv-physics-12',
-        'classIds': [class12AId],
-        'iconUrl': 'assets/icons/physics.png',
-        'colorHex': '#0f68e6',
-      });
-
-      // Calculus II (Grade 12-A)
-      DocumentReference calcRef = _db.collection('subjects').doc();
-      batch.set(calcRef, {
-        'name': 'Calculus II',
-        'slug': 'calculus-ii-12',
-        'classIds': [class12AId],
-        'iconUrl': 'assets/icons/math.png',
-        'colorHex': '#ea580c',
-      });
-
-      // --- 5. CHAPTERS ---
-
-      // Thermodynamics (Physics)
-      DocumentReference thermoRef = physRef.collection('chapters').doc();
-      batch.set(thermoRef, {
-        'title': 'Thermodynamics',
-        'slug': 'thermodynamics',
-        'description': 'Study of heat and energy.',
-        'subjectId': physId,
-        'isPublished': true,
-      });
-
-      // Quantum Mechanics (Physics)
-      DocumentReference quantumRef = physRef.collection('chapters').doc();
-      batch.set(quantumRef, {
-        'title': 'Quantum Mechanics',
-        'slug': 'quantum-mechanics',
-        'description': 'Intro to quantum physics.',
-        'subjectId': physId,
-        'isPublished': true,
-      });
-
-      // --- 6. TIMETABLE ---
-
-      // Monday 09:00 - 10:30 (Physics, Room 402)
-      DocumentReference tt1Ref = _db.collection('timetable').doc();
-      batch.set(tt1Ref, {
-        'classId': class12AId,
-        'className': 'Grade 12',
-        'subjectName': 'Advanced Physics',
-        'subjectId': physId,
-        'teacherId': teacherId,
-        'dayOfWeek': 'Monday',
-        'startTime': '09:00:00',
-        'endTime': '10:30:00',
-        'room': 'Room 402',
-        'section': 'A',
-        'studentCount': 2,
-      });
-
-      // Wednesday 11:00 - 12:30 (Physics, Lab B)
-      DocumentReference tt2Ref = _db.collection('timetable').doc();
-      batch.set(tt2Ref, {
-        'classId': class12AId,
-        'className': 'Grade 12',
-        'subjectName': 'Advanced Physics',
-        'subjectId': physId,
-        'teacherId': teacherId,
-        'dayOfWeek': 'Wednesday',
-        'startTime': '11:00:00',
-        'endTime': '12:30:00',
-        'room': 'Lab B',
-        'section': 'A',
-        'studentCount': 2,
-      });
-
-      await batch.commit();
-      batch = _db.batch(); // Re-initialize for the next section
-
-      // --- 7. DEMO TEACHER (teacher_123) SYSTEMATIC SEEDING ---
-      // This will create a realistic school environment for the demo teacher.
-
-      String demoTeacherId = 'teacher_123';
-
-      // Demo Teacher Profile
-      batch.set(_db.collection('users').doc(demoTeacherId), {
-        'uid': demoTeacherId,
         'fullName': 'Prof. John Anderson',
         'email': 'demo@routeminds.app',
         'role': 'teacher',
         'createdAt': FieldValue.serverTimestamp(),
       });
 
+      // --- 2. CLASSES ---
+      List<String> classIds = [];
+      List<String> classNames = ['10-A', '10-B'];
+      for (var name in classNames) {
+        DocumentReference ref = _db.collection('classes').doc();
+        classIds.add(ref.id);
+        batch.set(ref, {
+          'name': 'Grade 10',
+          'section': name.split('-')[1],
+          'academicYear': '2025-2026',
+          'teacherId': teacherId,
+          'studentCount': 25,
+        });
+      }
+
+      // --- 3. SUBJECTS & CHAPTERS ---
+      List<Map<String, dynamic>> subjectsData = [
+        {'name': 'Mathematics', 'color': '#0f68e6', 'icon': 'math'},
+        {'name': 'Physics', 'color': '#10b981', 'icon': 'science'},
+        {'name': 'Chemistry', 'color': '#f59e0b', 'icon': 'science'},
+        {'name': 'English', 'color': '#8b5cf6', 'icon': 'book'},
+        {'name': 'History', 'color': '#ef4444', 'icon': 'history'},
+      ];
+
+      List<String> subjectIds = [];
+      for (var s in subjectsData) {
+        DocumentReference ref = _db.collection('subjects').doc();
+        subjectIds.add(ref.id);
+        batch.set(ref, {
+          'name': s['name'],
+          'slug': s['name'].toString().toLowerCase(),
+          'classIds': classIds,
+          'colorHex': s['color'],
+          'iconUrl': 'assets/icons/${s['icon']}.png',
+        });
+
+        // Chapters
+        for (int i = 1; i <= 4; i++) {
+          DocumentReference cRef = ref.collection('chapters').doc();
+          batch.set(cRef, {
+            'title': 'Chapter $i: Introduction to ${s['name']}',
+            'slug': 'chapter-$i',
+            'description': 'Foundational concepts of ${s['name']}.',
+            'subjectId': ref.id,
+            'isPublished': true,
+          });
+        }
+      }
+
+      // --- 4. STUDENTS ---
       List<String> firstNames = [
         'James',
         'Mary',
@@ -262,27 +127,51 @@ class SeedService {
         'Gonzalez',
         'Wilson',
         'Anderson',
-        'Thomas',
-        'Taylor',
-        'Moore',
-        'Jackson',
-        'Martin',
-        'Lee',
-        'Perez',
-        'Thompson',
-        'White',
       ];
-      List<String> subjectsList = [
-        'Mathematics',
-        'English',
-        'Science',
-        'History',
-        'Geography',
-        'Art',
-        'Music',
-        'Physical Education',
-        'Computer Science',
-      ];
+
+      List<String> allStudentIds = [];
+      for (int i = 0; i < 50; i++) {
+        String studentId = 'student_demo_${(i + 1).toString().padLeft(3, '0')}';
+        allStudentIds.add(studentId);
+        String classId = classIds[i < 25 ? 0 : 1];
+        String section = classNames[i < 25 ? 0 : 1].split('-')[1];
+        String fName = firstNames[i % firstNames.length];
+        String lName = lastNames[i % lastNames.length];
+
+        batch.set(_db.collection('users').doc(studentId), {
+          'uid': studentId,
+          'fullName': '$fName $lName',
+          'email':
+              '${fName.toLowerCase()}.${lName.toLowerCase()}${i + 1}@demo.com',
+          'role': 'student',
+          'classId': classId,
+          'className': 'Grade 10',
+          'section': section,
+          'rollNumber': 'R-${(i + 1).toString().padLeft(3, '0')}',
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+
+        // Alexandira Rivers (student_123) for Demo Student button
+        if (i == 0) {
+          batch.set(_db.collection('users').doc('student_123'), {
+            'uid': 'student_123',
+            'fullName': '$fName $lName',
+            'email': 'alexandria@routeminds.app',
+            'role': 'student',
+            'classId': classId,
+            'className': 'Grade 10',
+            'section': section,
+            'rollNumber': 'R-001',
+            'createdAt': FieldValue.serverTimestamp(),
+          });
+          allStudentIds.add('student_123');
+        }
+      }
+
+      await batch.commit();
+      batch = _db.batch();
+
+      // --- 5. TIMETABLE ---
       List<String> days = [
         'Monday',
         'Tuesday',
@@ -290,108 +179,115 @@ class SeedService {
         'Thursday',
         'Friday',
       ];
-      List<Map<String, String>> slots = [
-        {'start': '08:00:00', 'end': '09:00:00'},
-        {'start': '09:15:00', 'end': '10:15:00'},
-        {'start': '10:30:00', 'end': '11:45:00'},
-        {'start': '12:30:00', 'end': '01:30:00'},
-        {'start': '01:45:00', 'end': '02:45:00'},
-      ];
-
-      int studentCounter = 1;
-      int globalBatchCount = 0;
-
-      // Create Grades 1 to 10
-      for (int grade = 1; grade <= 10; grade++) {
-        // Sections A, B, C for each grade
-        for (String section in ['A', 'B', 'C']) {
-          DocumentReference classRef = _db.collection('classes').doc();
-          String classId = classRef.id;
-          String className = '$grade';
-
-          int studentsInThisClass = 10 + (studentCounter % 6); // 10-15 students
-
-          batch.set(classRef, {
-            'name': className,
-            'section': section,
-            'academicYear': '2023-2024',
-            'teacherId': demoTeacherId,
-            'studentCount': studentsInThisClass,
-          });
-
-          // Create Students for this class
-          for (int s = 0; s < studentsInThisClass; s++) {
-            String fName = firstNames[(studentCounter + s) % firstNames.length];
-            String lName =
-                lastNames[(studentCounter * s + s) % lastNames.length];
-            String fullName = '$fName $lName';
-            String studentId =
-                'student_demo_${studentCounter.toString().padLeft(3, '0')}';
-
-            DocumentReference studentRef = _db
-                .collection('users')
-                .doc(studentId);
-            batch.set(studentRef, {
-              'uid': studentId,
-              'fullName': fullName,
-              'email': '${fName.toLowerCase()}${studentCounter}@demo.com',
-              'role': 'student',
+      for (var classId in classIds) {
+        String section = classId == classIds[0] ? 'A' : 'B';
+        for (int d = 0; d < days.length; d++) {
+          // 3 periods per day
+          for (int p = 0; p < 3; p++) {
+            int subIdx = (d + p) % subjectIds.length;
+            batch.set(_db.collection('timetable').doc(), {
               'classId': classId,
-              'className': className,
+              'className': 'Grade 10',
+              'subjectName': subjectsData[subIdx]['name'],
+              'subjectId': subjectIds[subIdx],
+              'teacherId': teacherId,
+              'dayOfWeek': days[d],
+              'startTime': '${08 + p}:00:00',
+              'endTime': '${09 + p}:00:00',
+              'room': 'Room 10$section',
               'section': section,
-              'rollNumber': 'R-${studentCounter.toString().padLeft(3, '0')}',
-              'createdAt': FieldValue.serverTimestamp(),
+              'studentCount': 25,
             });
-            studentCounter++;
-          }
-
-          // Create Timetable entries (2-3 per class per week)
-          for (int d = 0; d < 2; d++) {
-            String day =
-                days[(grade +
-                        (section == 'A'
-                            ? 0
-                            : section == 'B'
-                            ? 1
-                            : 2) +
-                        d) %
-                    days.length];
-            var slot = slots[(grade + d) % slots.length];
-            String subject = subjectsList[(grade + d) % subjectsList.length];
-
-            DocumentReference ttRef = _db.collection('timetable').doc();
-            batch.set(ttRef, {
-              'classId': classId,
-              'className': className,
-              'subjectName': subject,
-              'subjectId': 'sub_${subject.toLowerCase().replaceAll(' ', '_')}',
-              'teacherId': demoTeacherId,
-              'dayOfWeek': day,
-              'startTime': slot['start'],
-              'endTime': slot['end'],
-              'room': 'Room ${grade}${section}${d + 1}',
-              'section': section,
-              'studentCount': studentsInThisClass,
-            });
-          }
-
-          globalBatchCount++;
-          // Firestore batch limit is 500 operations. We are doing ~15 per class.
-          // 30 classes * 15 = 450. We are close. Let's commit every 10 classes.
-          if (globalBatchCount % 10 == 0) {
-            await batch.commit();
-            batch = _db.batch();
           }
         }
       }
 
-      // Check if there are any remaining operations to commit
-      if (globalBatchCount % 10 != 0) {
+      // --- 6. ATTENDANCE (7 days + Today) ---
+      DateTime today = DateTime(2026, 2, 11);
+      for (int i = 0; i < 8; i++) {
+        DateTime date = today.subtract(Duration(days: i));
+        if (date.weekday > 5) continue; // Skip weekends
+
+        for (var classId in classIds) {
+          String section = classId == classIds[0] ? 'A' : 'B';
+          DocumentReference sessionRef = _db
+              .collection('attendance_sessions')
+              .doc();
+          batch.set(sessionRef, {
+            'classId': classId,
+            'className': 'Grade 10',
+            'section': section,
+            'subjectId': subjectIds[0], // Mocking attendance for first subject
+            'subjectName': subjectsData[0]['name'],
+            'teacherId': teacherId,
+            'date': Timestamp.fromDate(date),
+            'createdAt': FieldValue.serverTimestamp(),
+          });
+
+          // Just a simple loop for few records to avoid 500 limit too fast
+          for (int s = 0; s < 5; s++) {
+            // Seeding first 5 students per session for performance
+            String sid = i < 25 ? allStudentIds[s] : allStudentIds[s + 25];
+            String studentName =
+                '${firstNames[s % firstNames.length]} ${lastNames[s % lastNames.length]}';
+
+            batch.set(_db.collection('attendance').doc(), {
+              'studentId': sid,
+              'studentName': studentName,
+              'classId': classId,
+              'className': 'Grade 10',
+              'section': section,
+              'subjectId': subjectIds[0],
+              'subjectName': subjectsData[0]['name'],
+              'teacherId': teacherId,
+              'date': Timestamp.fromDate(date),
+              'status': s % 5 == 0 ? 'Absent' : 'Present',
+              'remarks': '',
+              'sessionId': sessionRef.id,
+              'createdAt': FieldValue.serverTimestamp(),
+            });
+          }
+        }
         await batch.commit();
+        batch = _db.batch();
       }
 
-      if (kDebugMode)
-        print('Database Seeded Successfully with Extended Real-World Data!');
+      // --- 7. EXAMS & ANALYTICS ---
+      for (int s = 0; s < subjectIds.length; s++) {
+        for (int e = 1; e <= 2; e++) {
+          // 2 exams per subject
+          DocumentReference examRef = _db.collection('exams').doc();
+          batch.set(examRef, {
+            'title': '${subjectsData[s]['name']} Quiz $e',
+            'subjectId': subjectIds[s],
+            'subjectName': subjectsData[s]['name'],
+            'classId': classIds[0],
+            'teacherId': teacherId,
+            'date': Timestamp.fromDate(today.subtract(const Duration(days: 5))),
+            'totalMarks': 100,
+            'createdAt': FieldValue.serverTimestamp(),
+          });
+
+          // Submissions for first class
+          for (int studentIdx = 0; studentIdx < 5; studentIdx++) {
+            String sid = allStudentIds[studentIdx];
+            batch.set(examRef.collection('submissions').doc(sid), {
+              'studentId': sid,
+              'studentName':
+                  '${firstNames[studentIdx % firstNames.length]} ${lastNames[studentIdx % lastNames.length]}',
+              'marksObtained': 70 + (studentIdx * 5) % 30,
+              'totalMarks': 100,
+              'subjectId': subjectIds[s],
+              'subjectName': subjectsData[s]['name'],
+              'submittedAt': FieldValue.serverTimestamp(),
+            });
+          }
+          await batch.commit();
+          batch = _db.batch();
+        }
+      }
+
+      if (kDebugMode) print('Database Seeded Successfully with Real Data!');
     } catch (e) {
       if (kDebugMode) print('Error seeding database: $e');
       rethrow;

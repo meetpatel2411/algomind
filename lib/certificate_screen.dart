@@ -99,10 +99,10 @@ class CertificateScreen extends StatelessWidget {
         decoration: BoxDecoration(
           color: isDarkMode ? const Color(0xff1e293b) : Colors.white,
           shape: BoxShape.circle,
-          border: Border.all(color: primaryColor.withOpacity(0.1)),
+          border: Border.all(color: primaryColor.withValues(alpha: 0.1)),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 4,
               offset: const Offset(0, 2),
             ),
@@ -120,7 +120,7 @@ class CertificateScreen extends StatelessWidget {
           width: 64,
           height: 64,
           decoration: BoxDecoration(
-            color: primaryColor.withOpacity(0.1),
+            color: primaryColor.withValues(alpha: 0.1),
             shape: BoxShape.circle,
           ),
           child: Icon(Icons.verified_outlined, color: primaryColor, size: 32),
@@ -150,7 +150,7 @@ class CertificateScreen extends StatelessWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -167,7 +167,7 @@ class CertificateScreen extends StatelessWidget {
                 child: Container(
                   decoration: BoxDecoration(
                     border: Border.all(
-                      color: primaryColor.withOpacity(0.2),
+                      color: primaryColor.withValues(alpha: 0.2),
                       width: 2,
                     ),
                     borderRadius: BorderRadius.circular(16),
@@ -181,7 +181,7 @@ class CertificateScreen extends StatelessWidget {
                 child: Container(
                   decoration: BoxDecoration(
                     border: Border.all(
-                      color: primaryColor.withOpacity(0.1),
+                      color: primaryColor.withValues(alpha: 0.1),
                       width: 1,
                     ),
                     borderRadius: BorderRadius.circular(12),
@@ -310,7 +310,7 @@ class CertificateScreen extends StatelessWidget {
         gradient: LinearGradient(
           colors: [
             Colors.transparent,
-            primaryColor.withOpacity(0.3),
+            primaryColor.withValues(alpha: 0.3),
             Colors.transparent,
           ],
         ),
@@ -350,9 +350,9 @@ class CertificateScreen extends StatelessWidget {
           padding: const EdgeInsets.all(4),
           decoration: BoxDecoration(
             color: isDarkMode
-                ? Colors.white.withOpacity(0.05)
+                ? Colors.white.withValues(alpha: 0.05)
                 : Colors.grey.shade50,
-            border: Border.all(color: primaryColor.withOpacity(0.2)),
+            border: Border.all(color: primaryColor.withValues(alpha: 0.2)),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Image.network(
@@ -457,7 +457,7 @@ class CertificateScreen extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(24, 20, 24, 12),
         decoration: BoxDecoration(
           color: (isDarkMode ? const Color(0xff0f172a) : Colors.white)
-              .withOpacity(0.9),
+              .withValues(alpha: 0.9),
           border: Border(
             top: BorderSide(
               color: isDarkMode ? Colors.grey.shade800 : Colors.grey.shade200,
@@ -477,7 +477,7 @@ class CertificateScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(16),
                 ),
                 elevation: 10,
-                shadowColor: primaryColor.withOpacity(0.2),
+                shadowColor: primaryColor.withValues(alpha: 0.2),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -501,7 +501,7 @@ class CertificateScreen extends StatelessWidget {
                   child: ElevatedButton(
                     onPressed: () {},
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: primaryColor.withOpacity(0.1),
+                      backgroundColor: primaryColor.withValues(alpha: 0.1),
                       foregroundColor: primaryColor,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       minimumSize: const Size(0, 56),

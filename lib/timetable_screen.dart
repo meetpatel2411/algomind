@@ -161,16 +161,33 @@ class _TimetableScreenState extends State<TimetableScreen> {
                             // We need to parse time strings "HH:MM:SS"
                             final docs = snapshot.data!.docs;
 
-                            // Simple sort helper
                             int parseTimeToInt(String time) {
-                              final parts = time.split(':');
-                              return int.parse(parts[0]) * 60 +
-                                  int.parse(parts[1]);
+                              try {
+                                // Expected format: "08:00 AM" or "8:00 AM"
+                                final parts = time.trim().split(' ');
+                                final timeParts = parts[0].split(':');
+                                int hour = int.parse(timeParts[0]);
+                                int minute = int.parse(timeParts[1]);
+
+                                if (parts.length > 1) {
+                                  final period = parts[1].toUpperCase();
+                                  if (period == 'PM' && hour != 12) {
+                                    hour += 12;
+                                  } else if (period == 'AM' && hour == 12) {
+                                    hour = 0;
+                                  }
+                                }
+                                return hour * 60 + minute;
+                              } catch (e) {
+                                return 0; // Fallback
+                              }
                             }
 
                             docs.sort((a, b) {
-                              final tA = a['startTime'] as String;
-                              final tB = b['startTime'] as String;
+                              final tA =
+                                  a['startTime'] as String? ?? '00:00 AM';
+                              final tB =
+                                  b['startTime'] as String? ?? '00:00 AM';
                               return parseTimeToInt(
                                 tA,
                               ).compareTo(parseTimeToInt(tB));

@@ -173,7 +173,7 @@ class SeedService {
       await batch.commit();
       batch = _db.batch();
 
-      // --- 5. TIMETABLE ---
+      // --- 5. TIMETABLE (Now Seeding as 'classes' Sessions) ---
       List<String> days = [
         'Monday',
         'Tuesday',
@@ -187,26 +187,29 @@ class SeedService {
           // 3 periods per day
           for (int p = 0; p < 3; p++) {
             int subIdx = (d + p) % subjectIds.length;
-            batch.set(_db.collection('timetable').doc(), {
-              'classId': classId,
-              'className': 'Grade 10',
-              'subjectName': subjectsData[subIdx]['name'],
-              'subjectId': subjectIds[subIdx],
+            // Create a session in 'classes' collection
+            batch.set(_db.collection('classes').doc(), {
+              'classId': classId, // Link to the 'Group' class
+              'name': 'Grade 10', // Same name as Group
+              'subject': subjectsData[subIdx]['name'],
+              'subjectId': subjectIds[subIdx], // Helpful for attendance linking
               'teacherId': teacherId,
               'dayOfWeek': days[d],
-              'startTime': '${08 + p}:00:00',
-              'endTime': '${09 + p}:00:00',
+              'startTime': '${08 + p}:00 AM', // Format to match AddClassScreen
+              'endTime': '${09 + p}:00 AM',
               'room': 'Room 10$section',
               'section': section,
               'studentCount': 25,
+              'createdAt': FieldValue.serverTimestamp(),
             });
           }
         }
       }
 
-      // --- 6. ATTENDANCE (7 days + Today) ---
-      DateTime today = DateTime(2026, 2, 11);
-      for (int i = 0; i < 8; i++) {
+      // --- 6. ATTENDANCE (7 days history, Today empty for marking) ---
+      DateTime today = DateTime.now();
+      for (int i = 1; i <= 7; i++) {
+        // Start from 1 to skip today
         DateTime date = today.subtract(Duration(days: i));
         if (date.weekday > 5) continue; // Skip weekends
 
@@ -250,11 +253,15 @@ class SeedService {
             });
           }
         }
-        await batch.commit();
-        batch = _db.batch();
+        if ((i % 2) == 0) {
+          // Commit batch every 2 days to stay safe
+          await batch.commit();
+          batch = _db.batch();
+        }
       }
 
       // --- 7. EXAMS & ANALYTICS ---
+      // Past Exams (for analytics)
       for (int s = 0; s < subjectIds.length; s++) {
         for (int e = 1; e <= 2; e++) {
           // 2 exams per subject
@@ -285,10 +292,32 @@ class SeedService {
               'submittedAt': FieldValue.serverTimestamp(),
             });
           }
-          await batch.commit();
-          batch = _db.batch();
         }
       }
+
+      // Today's Exam (for "Upcoming/Today" list)
+      batch.set(_db.collection('exams').doc(), {
+        'title': 'Mathematics Mid-Term',
+        'subjectId': subjectIds[0],
+        'subjectName': subjectsData[0]['name'],
+        'classId': classIds[0],
+        'teacherId': teacherId,
+        'date': Timestamp.fromDate(today), // Schedule for TODAY
+        'totalMarks': 50,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+
+      // Upcoming Exam (2 days later)
+      batch.set(_db.collection('exams').doc(), {
+        'title': 'Physics Final',
+        'subjectId': subjectIds[1],
+        'subjectName': subjectsData[1]['name'],
+        'classId': classIds[0],
+        'teacherId': teacherId,
+        'date': Timestamp.fromDate(today.add(const Duration(days: 2))),
+        'totalMarks': 100,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
 
       // --- 8. NOTIFICATIONS ---
       List<Map<String, dynamic>> mockNotifications = [

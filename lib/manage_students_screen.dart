@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'services/database_service.dart';
 import 'widgets/profile_image.dart';
 import 'student_profile_screen.dart';
+import 'teacher_profile_screen.dart';
 import 'widgets/teacher_bottom_navigation.dart';
 // Duplicate imports removed
 
@@ -359,16 +360,53 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
   }
 
   Widget _buildHeader(bool isDarkMode, Color subTextColor, Color textColor) {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
-      child: Text(
-        'Manage Students',
-        style: GoogleFonts.lexend(
-          fontSize: 24,
-          fontWeight: FontWeight.bold,
-          color: textColor,
-        ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            'Manage Students',
+            style: GoogleFonts.lexend(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: textColor,
+            ),
+          ),
+          StreamBuilder<DocumentSnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection('users')
+                .doc(uid)
+                .snapshots(),
+            builder: (context, snapshot) {
+              final userData = snapshot.data?.data() as Map<String, dynamic>?;
+              final String imageUrl =
+                  userData?['imageUrl'] ??
+                  'https://lh3.googleusercontent.com/aida-public/AB6AXuDDJ0xT_gismssEV3tDJT-5kYdGVXCrGNSCNKwmxu_icHAUrDUt8owJFEtSDe1qLPCXqxnROGnBHSIZ7GH-U6H3SMmGMkkJ1Ca6uCEO3HwTYcwMyyMIJgaAd-70rgAIsHbISjIG4SRNf8H5PQc0evW9-XY5d2A7fH_stOAZUy-RyDk09YD-JA16RkWy6use7JvQlpOkiNWqQ2cyujIfT8bjohE5T6AytBDjzLWE68a6BXk7LCzNDZd-p632NC373yt71pGpNoehdYk';
+
+              return GestureDetector(
+                onTap: () {
+                  if (uid != null) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => TeacherProfileScreen(uid: uid),
+                      ),
+                    );
+                  }
+                },
+                child: ProfileImage(
+                  imageUrl: imageUrl,
+                  size: 40,
+                  borderColor: primaryColor.withValues(alpha: 0.2),
+                  borderWidth: 2,
+                ),
+              );
+            },
+          ),
+        ],
       ),
     );
   }

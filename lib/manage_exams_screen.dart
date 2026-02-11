@@ -6,7 +6,9 @@ import 'widgets/teacher_bottom_navigation.dart';
 import 'create_exam_screen.dart';
 import 'widgets/profile_image.dart';
 import 'exam_details_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'exam_results_screen.dart';
+import 'teacher_profile_screen.dart';
 
 class ManageExamsScreen extends StatefulWidget {
   const ManageExamsScreen({super.key});
@@ -196,11 +198,38 @@ class _ManageExamsScreenState extends State<ManageExamsScreen> {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  ProfileImage(
-                    imageUrl:
-                        'https://lh3.googleusercontent.com/aida-public/AB6AXuB8RoccHkfm2u4VVnSS5eo8dQPDBqPv87nYeYRyxh69SLXZM734PIJYe6mYavQupcXOWTB0xN7mpkzyURhE8eFHf0LwTn59iXth6tcA5EC73nfxTuJWOQozZaQuDRCnT4evJMiIWCFQN0IxTPBzpn3IfFmHvMWjfHuSGfBBgxqs9mJ522s2udLsfth2wrIdisWAajjV0Xt9INcbiyhP4C8jTA_ovabeQJ_STvIyy68IQpGG1JQRkEiHK04kF5B3B4hxDf7QwuMfBjc',
-                    borderColor: primaryColor.withValues(alpha: 0.2),
-                    borderWidth: 2,
+                  StreamBuilder<DocumentSnapshot>(
+                    stream: FirebaseFirestore.instance
+                        .collection('users')
+                        .doc(FirebaseAuth.instance.currentUser?.uid)
+                        .snapshots(),
+                    builder: (context, snapshot) {
+                      final userData =
+                          snapshot.data?.data() as Map<String, dynamic>?;
+                      final String imageUrl =
+                          userData?['imageUrl'] ??
+                          'https://lh3.googleusercontent.com/aida-public/AB6AXuDDJ0xT_gismssEV3tDJT-5kYdGVXCrGNSCNKwmxu_icHAUrDUt8owJFEtSDe1qLPCXqxnROGnBHSIZ7GH-U6H3SMmGMkkJ1Ca6uCEO3HwTYcwMyyMIJgaAd-70rgAIsHbISjIG4SRNf8H5PQc0evW9-XY5d2A7fH_stOAZUy-RyDk09YD-JA16RkWy6use7JvQlpOkiNWqQ2cyujIfT8bjohE5T6AytBDjzLWE68a6BXk7LCzNDZd-p632NC373yt71pGpNoehdYk';
+
+                      return GestureDetector(
+                        onTap: () {
+                          String? uid = FirebaseAuth.instance.currentUser?.uid;
+                          if (uid != null) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    TeacherProfileScreen(uid: uid),
+                              ),
+                            );
+                          }
+                        },
+                        child: ProfileImage(
+                          imageUrl: imageUrl,
+                          borderColor: primaryColor.withValues(alpha: 0.2),
+                          borderWidth: 2,
+                        ),
+                      );
+                    },
                   ),
                 ],
               ),

@@ -24,7 +24,8 @@ class ChapterExamScreen extends StatefulWidget {
   State<ChapterExamScreen> createState() => _ChapterExamScreenState();
 }
 
-class _ChapterExamScreenState extends State<ChapterExamScreen> {
+class _ChapterExamScreenState extends State<ChapterExamScreen>
+    with WidgetsBindingObserver {
   final Color primaryColor = const Color(0xff0f68e6);
   final Color backgroundLight = const Color(0xfff6f7f8);
   final Color backgroundDark = const Color(0xff101722);
@@ -37,11 +38,60 @@ class _ChapterExamScreenState extends State<ChapterExamScreen> {
   late Timer _timer;
   int _secondsLeft = 2700; // 45 minutes
 
+  // Security checks
+  bool _isSecurityCheckActive = true;
+  bool _isSecurityViolation = false;
+
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _generateRandomQuestions();
     _startTimer();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _timer.cancel();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (!_isFinished && _isSecurityCheckActive) {
+      if (state == AppLifecycleState.paused ||
+          state == AppLifecycleState.inactive) {
+        // App went to background or lost focus
+        _handleSecurityViolation();
+      }
+    }
+  }
+
+  void _handleSecurityViolation() {
+    // Prevent multiple triggers if already finished
+    if (_isFinished) return;
+
+    if (mounted) {
+      // Close any open dialogs first
+      if (Navigator.canPop(context)) {
+        Navigator.pop(context);
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Exam terminated due to security violation.'),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 4),
+        ),
+      );
+
+      setState(() {
+        _isSecurityViolation = true;
+        _isFinished = true;
+        _isSecurityCheckActive = false;
+      });
+    }
   }
 
   void _generateRandomQuestions() {
@@ -146,12 +196,6 @@ class _ChapterExamScreenState extends State<ChapterExamScreen> {
     });
   }
 
-  @override
-  void dispose() {
-    _timer.cancel();
-    super.dispose();
-  }
-
   String _formatTime(int totalSeconds) {
     int minutes = totalSeconds ~/ 60;
     int seconds = totalSeconds % 60;
@@ -159,6 +203,8 @@ class _ChapterExamScreenState extends State<ChapterExamScreen> {
   }
 
   void _finishExam() {
+    if (_isFinished) return; // Prevent multiple calls
+    _isSecurityCheckActive = false;
     setState(() {
       _isFinished = true;
     });
@@ -174,23 +220,58 @@ class _ChapterExamScreenState extends State<ChapterExamScreen> {
     return score;
   }
 
+  Future<bool> _onWillPop() async {
+    if (_isFinished) return true;
+
+    final shouldPop = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Quit Exam?'),
+        content: const Text(
+          'Are you sure you want to quit?\nYour progress will be lost.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Quit', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+    return shouldPop ?? false;
+  }
+
   @override
   Widget build(BuildContext context) {
     final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     if (_isFinished) {
-      return _buildResultView(isDarkMode);
+      return PopScope(canPop: true, child: _buildResultView(isDarkMode));
     }
 
-    return Scaffold(
-      backgroundColor: isDarkMode ? backgroundDark : backgroundLight,
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(isDarkMode),
-            Expanded(child: _buildQuestionArea(isDarkMode)),
-            _buildFooter(isDarkMode),
-          ],
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        final shouldPop = await _onWillPop();
+        if (shouldPop && context.mounted) {
+          Navigator.pop(context);
+        }
+      },
+      child: Scaffold(
+        backgroundColor: isDarkMode ? backgroundDark : backgroundLight,
+        body: SafeArea(
+          child: Column(
+            children: [
+              _buildHeader(isDarkMode),
+              Expanded(child: _buildQuestionArea(isDarkMode)),
+              _buildFooter(isDarkMode),
+            ],
+          ),
         ),
       ),
     );
@@ -529,7 +610,7 @@ class _ChapterExamScreenState extends State<ChapterExamScreen> {
   }
 
   Widget _buildResultView(bool isDarkMode) {
-    int score = _calculateScore();
+    int score = _isSecurityViolation ? 0 : _calculateScore();
     double percentage = (score / _questions.length) * 100;
 
     return Scaffold(
@@ -544,22 +625,30 @@ class _ChapterExamScreenState extends State<ChapterExamScreen> {
                 width: 120,
                 height: 120,
                 decoration: BoxDecoration(
-                  color: primaryColor.withValues(alpha: 0.1),
+                  color: _isSecurityViolation
+                      ? Colors.red.withValues(alpha: 0.1)
+                      : primaryColor.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Center(
                   child: Icon(
-                    percentage >= 50
-                        ? Icons.emoji_events
-                        : Icons.sentiment_very_dissatisfied,
+                    _isSecurityViolation
+                        ? Icons.gpp_bad_rounded
+                        : (percentage >= 50
+                              ? Icons.emoji_events
+                              : Icons.sentiment_very_dissatisfied),
                     size: 60,
-                    color: primaryColor,
+                    color: _isSecurityViolation ? Colors.red : primaryColor,
                   ),
                 ),
               ),
               const SizedBox(height: 32),
               Text(
-                percentage >= 50 ? "Exam Completed!" : "Keep Practicing!",
+                _isSecurityViolation
+                    ? "Exam Terminated"
+                    : (percentage >= 50
+                          ? "Exam Completed!"
+                          : "Keep Practicing!"),
                 style: GoogleFonts.lexend(
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
@@ -568,7 +657,9 @@ class _ChapterExamScreenState extends State<ChapterExamScreen> {
               ),
               const SizedBox(height: 12),
               Text(
-                "You scored $score out of ${_questions.length} questions",
+                _isSecurityViolation
+                    ? "Security violation detected."
+                    : "You scored $score out of ${_questions.length} questions",
                 style: GoogleFonts.lexend(fontSize: 16, color: Colors.grey),
               ),
               const SizedBox(height: 48),
@@ -586,12 +677,7 @@ class _ChapterExamScreenState extends State<ChapterExamScreen> {
                 isDarkMode,
               ),
               const SizedBox(height: 16),
-              _buildResultCard(
-                "Status",
-                percentage >= 50 ? "PASSED" : "FAILED",
-                percentage >= 50 ? Colors.green : Colors.red,
-                isDarkMode,
-              ),
+              _buildResultCard("Status", "FAILED", Colors.red, isDarkMode),
               const SizedBox(height: 64),
               if (percentage >= 50) ...[
                 const SizedBox(height: 16),

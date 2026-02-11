@@ -7,6 +7,8 @@ import 'services/database_service.dart';
 import 'widgets/teacher_bottom_navigation.dart';
 import 'add_edit_class_screen.dart';
 import 'mark_attendance_screen.dart';
+import 'widgets/profile_image.dart';
+import 'teacher_profile_screen.dart';
 
 class TeachingScheduleScreen extends StatefulWidget {
   const TeachingScheduleScreen({super.key});
@@ -115,6 +117,7 @@ class _TeachingScheduleScreenState extends State<TeachingScheduleScreen>
   // Removed _buildSystemStatusBar
 
   Widget _buildHeader(Color textColor, Color subTextColor, bool isDarkMode) {
+    final String? uid = FirebaseAuth.instance.currentUser?.uid;
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
       child: Column(
@@ -132,31 +135,37 @@ class _TeachingScheduleScreenState extends State<TeachingScheduleScreen>
                   letterSpacing: -0.5,
                 ),
               ),
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: isDarkMode
-                      ? const Color(0xff334155)
-                      : const Color(0xffe2e8f0),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.calendar_today_rounded,
-                  size: 18,
-                  color: subTextColor,
-                ),
+              StreamBuilder<DocumentSnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collection('users')
+                    .doc(uid)
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  final userData =
+                      snapshot.data?.data() as Map<String, dynamic>?;
+                  final String imageUrl =
+                      userData?['imageUrl'] ??
+                      'https://lh3.googleusercontent.com/aida-public/AB6AXuDDJ0xT_gismssEV3tDJT-5kYdGVXCrGNSCNKwmxu_icHAUrDUt8owJFEtSDe1qLPCXqxnROGnBHSIZ7GH-U6H3SMmGMkkJ1Ca6uCEO3HwTYcwMyyMIJgaAd-70rgAIsHbISjIG4SRNf8H5PQc0evW9-XY5d2A7fH_stOAZUy-RyDk09YD-JA16RkWy6use7JvQlpOkiNWqQ2cyujIfT8bjohE5T6AytBDjzLWE68a6BXk7LCzNDZd-p632NC373yt71pGpNoehdYk';
+
+                  return GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => TeacherProfileScreen(uid: uid),
+                        ),
+                      );
+                    },
+                    child: ProfileImage(
+                      imageUrl: imageUrl,
+                      size: 40,
+                      borderColor: primaryColor.withValues(alpha: 0.2),
+                      borderWidth: 2,
+                    ),
+                  );
+                },
               ),
             ],
-          ),
-          const SizedBox(height: 2),
-          Text(
-            'Wednesday, Oct 25',
-            style: GoogleFonts.lexend(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: subTextColor,
-            ),
           ),
         ],
       ),

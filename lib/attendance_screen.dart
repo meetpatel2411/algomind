@@ -6,6 +6,8 @@ import 'package:intl/intl.dart';
 import 'services/database_service.dart';
 import 'widgets/teacher_bottom_navigation.dart';
 import 'mark_attendance_screen.dart';
+import 'widgets/profile_image.dart';
+import 'teacher_profile_screen.dart';
 
 class AttendanceScreen extends StatefulWidget {
   const AttendanceScreen({super.key});
@@ -169,18 +171,37 @@ class _AttendanceScreenState extends State<AttendanceScreen>
             ],
           ),
           // Profile icon instead of synced indicator
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: primaryColor.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: primaryColor.withValues(alpha: 0.2),
-                width: 2,
-              ),
-            ),
-            child: Icon(Icons.person_rounded, color: primaryColor, size: 20),
+          StreamBuilder<DocumentSnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection('users')
+                .doc(FirebaseAuth.instance.currentUser?.uid)
+                .snapshots(),
+            builder: (context, snapshot) {
+              final userData = snapshot.data?.data() as Map<String, dynamic>?;
+              final String imageUrl =
+                  userData?['imageUrl'] ??
+                  'https://lh3.googleusercontent.com/aida-public/AB6AXuDDJ0xT_gismssEV3tDJT-5kYdGVXCrGNSCNKwmxu_icHAUrDUt8owJFEtSDe1qLPCXqxnROGnBHSIZ7GH-U6H3SMmGMkkJ1Ca6uCEO3HwTYcwMyyMIJgaAd-70rgAIsHbISjIG4SRNf8H5PQc0evW9-XY5d2A7fH_stOAZUy-RyDk09YD-JA16RkWy6use7JvQlpOkiNWqQ2cyujIfT8bjohE5T6AytBDjzLWE68a6BXk7LCzNDZd-p632NC373yt71pGpNoehdYk';
+
+              return GestureDetector(
+                onTap: () {
+                  String? uid = FirebaseAuth.instance.currentUser?.uid;
+                  if (uid != null) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => TeacherProfileScreen(uid: uid),
+                      ),
+                    );
+                  }
+                },
+                child: ProfileImage(
+                  imageUrl: imageUrl,
+                  size: 40,
+                  borderColor: primaryColor.withValues(alpha: 0.2),
+                  borderWidth: 2,
+                ),
+              );
+            },
           ),
         ],
       ),

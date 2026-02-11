@@ -6,11 +6,13 @@ import 'package:intl/intl.dart';
 import 'services/database_service.dart';
 
 class StudentAttendanceScreen extends StatelessWidget {
-  const StudentAttendanceScreen({super.key});
+  final String? uid;
+  const StudentAttendanceScreen({super.key, this.uid});
 
   @override
   Widget build(BuildContext context) {
-    final user = FirebaseAuth.instance.currentUser;
+    final currentUser = FirebaseAuth.instance.currentUser;
+    final String? userId = uid ?? currentUser?.uid;
     final DatabaseService db = DatabaseService();
 
     final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
@@ -31,7 +33,7 @@ class StudentAttendanceScreen extends StatelessWidget {
     final Color successColor = const Color(0xff10b981);
     final Color dangerColor = const Color(0xffef4444);
 
-    if (user == null) {
+    if (userId == null) {
       return const Scaffold(body: Center(child: Text('Please login')));
     }
 
@@ -51,7 +53,7 @@ class StudentAttendanceScreen extends StatelessWidget {
         iconTheme: IconThemeData(color: textColor),
       ),
       body: StreamBuilder<QuerySnapshot>(
-        stream: db.getStudentAttendanceHistory(user.uid),
+        stream: db.getStudentAttendanceHistory(userId),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return Center(

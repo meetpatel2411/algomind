@@ -476,7 +476,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => const StudentAttendanceScreen(),
+                  builder: (context) => StudentAttendanceScreen(uid: _uid),
                 ),
               );
             },

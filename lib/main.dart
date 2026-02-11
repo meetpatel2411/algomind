@@ -55,9 +55,14 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class AuthWrapper extends StatelessWidget {
+class AuthWrapper extends StatefulWidget {
   const AuthWrapper({super.key});
 
+  @override
+  State<AuthWrapper> createState() => _AuthWrapperState();
+}
+
+class _AuthWrapperState extends State<AuthWrapper> {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<User?>(
@@ -70,8 +75,9 @@ class AuthWrapper extends StatelessWidget {
         }
 
         if (snapshot.hasData && snapshot.data != null) {
-          return FutureBuilder<List<ScheduledUser>>(
-            future: AuthService().getStoredUsers(),
+          return FutureBuilder<ScheduledUser?>(
+            // Create a new future on retry (setState)
+            future: AuthService().getUserDetails(snapshot.data!),
             builder: (context, userSnapshot) {
               if (userSnapshot.connectionState == ConnectionState.waiting) {
                 return const Scaffold(
@@ -79,23 +85,52 @@ class AuthWrapper extends StatelessWidget {
                 );
               }
 
-              final String uid = snapshot.data!.uid;
-              final users = userSnapshot.data ?? [];
-              final currentUser = users.firstWhere(
-                (u) => u.uid == uid,
-                orElse: () => ScheduledUser(
-                  uid: uid,
-                  fullName: 'User',
-                  email: snapshot.data!.email ?? '',
-                  role: 'student', // Default role
-                  lastLogin: DateTime.now(),
-                ),
-              );
+              final ScheduledUser? user = userSnapshot.data;
 
-              if (currentUser.role == 'student') {
+              if (user == null) {
+                return Scaffold(
+                  body: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.error_outline,
+                          size: 48,
+                          color: Colors.red,
+                        ),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'Unable to load user profile.',
+                          style: TextStyle(fontSize: 16),
+                        ),
+                        const SizedBox(height: 4),
+                        const Text(
+                          'Please check your internet connection.',
+                          style: TextStyle(color: Colors.grey),
+                        ),
+                        const SizedBox(height: 24),
+                        ElevatedButton(
+                          onPressed: () {
+                            setState(() {}); // Retry
+                          },
+                          child: const Text('Retry'),
+                        ),
+                        TextButton(
+                          onPressed: () async {
+                            await AuthService().logout();
+                          },
+                          child: const Text('Logout'),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+
+              if (user.role == 'student') {
                 return const StudentDashboard();
               } else {
-                return TeacherDashboard(uid: uid);
+                return TeacherDashboard(uid: user.uid);
               }
             },
           );

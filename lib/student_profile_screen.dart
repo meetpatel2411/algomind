@@ -7,10 +7,12 @@ import 'services/database_service.dart';
 import 'widgets/profile_image.dart';
 import 'widgets/student_bottom_navigation.dart';
 import 'settings_screen.dart';
+import 'edit_profile_screen.dart';
 
 class StudentProfileScreen extends StatefulWidget {
   final Map<String, String> studentData;
-  const StudentProfileScreen({super.key, required this.studentData});
+  final String? uid;
+  const StudentProfileScreen({super.key, required this.studentData, this.uid});
 
   @override
   State<StudentProfileScreen> createState() => _StudentProfileScreenState();
@@ -25,7 +27,13 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
   int _selectedTabIndex = 0;
 
   final DatabaseService _db = DatabaseService();
-  final String? _uid = FirebaseAuth.instance.currentUser?.uid;
+  late final String? _uid;
+
+  @override
+  void initState() {
+    super.initState();
+    _uid = widget.uid ?? FirebaseAuth.instance.currentUser?.uid;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -72,6 +80,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
 
           return SafeArea(
             child: Stack(
+              fit: StackFit.expand,
               children: [
                 Column(
                   children: [
@@ -193,11 +202,28 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const SettingsScreen(),
+                      builder: (context) => SettingsScreen(uid: _uid!),
                     ),
                   );
                 },
                 icon: Icon(Icons.settings_rounded, color: subTextColor),
+              ),
+              IconButton(
+                onPressed: () async {
+                  final userData = await _db.getUserProfile(_uid!);
+                  if (!context.mounted) return;
+                  if (userData != null) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            EditProfileScreen(userData: userData, uid: _uid),
+                      ),
+                    );
+                  }
+                },
+                icon: Icon(Icons.edit_note_rounded, color: primaryColor),
+                tooltip: 'Edit Profile',
               ),
             ],
           ),
@@ -812,7 +838,11 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
     Color subTextColor,
     bool isDarkMode,
   ) {
-    return StudentBottomNavigation(currentIndex: 4, isDarkMode: isDarkMode);
+    return StudentBottomNavigation(
+      currentIndex: 4,
+      isDarkMode: isDarkMode,
+      uid: _uid,
+    );
   }
 }
 

@@ -74,6 +74,7 @@ class _TimetableScreenState extends State<TimetableScreen> {
       body: ConnectivityIndicator(
         child: SafeArea(
           child: Stack(
+            fit: StackFit.expand,
             children: [
               Column(
                 children: [

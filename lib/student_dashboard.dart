@@ -10,6 +10,9 @@ import 'enrolled_courses_screen.dart';
 import 'timetable_screen.dart';
 import 'widgets/profile_image.dart';
 import 'widgets/student_bottom_navigation.dart';
+import 'notifications_screen.dart';
+import 'course_details_screen.dart';
+import 'learning_analytics_screen.dart';
 
 import 'widgets/connectivity_indicator.dart';
 
@@ -73,6 +76,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
           return ConnectivityIndicator(
             child: SafeArea(
               child: Stack(
+                fit: StackFit.expand,
                 children: [
                   SingleChildScrollView(
                     padding: const EdgeInsets.only(bottom: 120),
@@ -87,6 +91,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
                           borderColor,
                           isDarkMode,
                           fullName,
+                          uid,
                         ),
                         const SizedBox(height: 24),
 
@@ -226,6 +231,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
     Color borderColor,
     bool isDarkMode,
     String userName,
+    String uid,
   ) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -293,25 +299,34 @@ class _StudentDashboardState extends State<StudentDashboard> {
               ),
             ],
           ),
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: surfaceColor,
-              shape: BoxShape.circle,
-              border: Border.all(color: borderColor),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.02),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
-                ),
-              ],
+          InkWell(
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => NotificationsScreen(uid: uid),
+              ),
             ),
-            child: Icon(
-              Icons.notifications_outlined,
-              color: subTextColor,
-              size: 20,
+            borderRadius: BorderRadius.circular(20),
+            child: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: surfaceColor,
+                shape: BoxShape.circle,
+                border: Border.all(color: borderColor),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.02),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Icon(
+                Icons.notifications_outlined,
+                color: subTextColor,
+                size: 20,
+              ),
             ),
           ),
         ],
@@ -642,7 +657,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => const EnrolledCoursesScreen(),
+                    builder: (context) => EnrolledCoursesScreen(uid: _uid),
                   ),
                 );
               },
@@ -704,12 +719,23 @@ class _StudentDashboardState extends State<StudentDashboard> {
                 return Expanded(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                    child: _buildSubjectItem(
-                      name,
-                      icon,
-                      color,
-                      subTextColor,
-                      isDarkMode,
+                    child: GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                CourseDetailsScreen(title: name),
+                          ),
+                        );
+                      },
+                      child: _buildSubjectItem(
+                        name,
+                        icon,
+                        color,
+                        subTextColor,
+                        isDarkMode,
+                      ),
                     ),
                   ),
                 );
@@ -780,12 +806,22 @@ class _StudentDashboardState extends State<StudentDashboard> {
                   color: textColor,
                 ),
               ),
-              Text(
-                'View Details',
-                style: GoogleFonts.lexend(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: primaryColor,
+              GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => LearningAnalyticsScreen(uid: _uid),
+                    ),
+                  );
+                },
+                child: Text(
+                  'View Details',
+                  style: GoogleFonts.lexend(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: primaryColor,
+                  ),
                 ),
               ),
             ],

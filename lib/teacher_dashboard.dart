@@ -141,7 +141,15 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
                                           context,
                                           MaterialPageRoute(
                                             builder: (context) =>
-                                                const SettingsScreen(),
+                                                SettingsScreen(
+                                                  uid:
+                                                      widget.uid ??
+                                                      FirebaseAuth
+                                                          .instance
+                                                          .currentUser
+                                                          ?.uid ??
+                                                      '',
+                                                ),
                                           ),
                                         );
                                       },

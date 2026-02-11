@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -128,6 +129,62 @@ class AuthService {
   Future<void> clearOfflineData() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_storageKey);
+  }
+
+  // Fetch User Details (Check Cache first, then Firestore)
+  Future<ScheduledUser?> getUserDetails(User firebaseUser) async {
+    final String uid = firebaseUser.uid;
+
+    // 1. Check Local Cache
+    List<ScheduledUser> localUsers = await getStoredUsers();
+    try {
+      final user = localUsers.firstWhere((u) => u.uid == uid);
+      return user;
+    } catch (e) {
+      // Not found in cache, continue to Firestore
+    }
+
+    // 2. Fetch from Firestore
+    try {
+      // We need DatabaseService here. avoiding circular dependency if possible.
+      // Assuming DatabaseService is robust.
+      // Dynamic import or just import at top?
+      // Since we are in the same folder, circle dependency might be an issue if DatabaseService imports AuthService.
+      // Let's check DatabaseService imports.
+      // It likely doesn't import AuthService.
+
+      // For now, we'll assume we can't import DatabaseService easily if it causes issues,
+      // but usually standard services don't depend on AuthService unless for header injection.
+      // Let's assume we can fetch document from 'users' collection directly using FirebaseFirestore.
+
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .get();
+
+      if (doc.exists && doc.data() != null) {
+        final data = doc.data()!;
+        final String role = data['role'] ?? 'student';
+        final String fullName = data['fullName'] ?? 'User';
+
+        // 3. Update Cache
+        await cacheUser(firebaseUser, role, fullName);
+
+        // 4. Return User
+        return ScheduledUser(
+          uid: uid,
+          fullName: fullName,
+          email: firebaseUser.email ?? '',
+          role: role,
+          lastLogin: DateTime.now(),
+          photoUrl: firebaseUser.photoURL,
+        );
+      }
+    } catch (e) {
+      if (kDebugMode) print('Error fetching user from Firestore: $e');
+    }
+
+    return null; // Not found
   }
 
   Future<void> logout() async {

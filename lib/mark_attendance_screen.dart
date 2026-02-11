@@ -221,7 +221,7 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
           : ListView.separated(
               padding: const EdgeInsets.all(16),
               itemCount: _students.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              separatorBuilder: (context, index) => const SizedBox(height: 12),
               itemBuilder: (context, index) {
                 final student = _students[index];
                 final status = student['status'];

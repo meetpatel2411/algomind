@@ -21,6 +21,7 @@ class _LearningAnalyticsScreenState extends State<LearningAnalyticsScreen> {
   final Color primaryColor = const Color(0xff0f68e6);
   final Color backgroundLight = const Color(0xfff6f7f8);
   final Color backgroundDark = const Color(0xff101722);
+  String _selectedFilter = "All Subjects";
 
   @override
   Widget build(BuildContext context) {
@@ -42,6 +43,7 @@ class _LearningAnalyticsScreenState extends State<LearningAnalyticsScreen> {
       body: ConnectivityIndicator(
         child: SafeArea(
           child: Stack(
+            fit: StackFit.expand,
             children: [
               FutureBuilder<Map<String, dynamic>?>(
                 future: DatabaseService().getUserProfile(
@@ -53,150 +55,338 @@ class _LearningAnalyticsScreenState extends State<LearningAnalyticsScreen> {
                   }
 
                   // If we have a user profile, we can fetch attendance
-                  // Use currentUser.uid as studentId (since we used uid as doc ID)
-                  final studentId =
+                  final String studentId =
                       widget.uid ??
                       FirebaseAuth.instance.currentUser?.uid ??
                       '';
+                  final String? classId = userSnapshot.data?['classId'];
 
                   return StreamBuilder<QuerySnapshot>(
-                    stream: DatabaseService().getStudentAttendanceHistory(
-                      studentId,
-                    ),
-                    builder: (context, attendanceSnapshot) {
-                      if (attendanceSnapshot.hasError) {
-                        return Center(
-                          child: Text(
-                            "Error loading attendance: ${attendanceSnapshot.error}",
-                            style: GoogleFonts.lexend(color: Colors.red),
-                          ),
-                        );
-                      }
-
-                      // Calculate Attendance stats
-                      double attendancePct = 0.0;
-                      String attendanceTrend = "No Data";
-
-                      if (attendanceSnapshot.hasData &&
-                          attendanceSnapshot.data!.docs.isNotEmpty) {
-                        final docs = attendanceSnapshot.data!.docs;
-                        final total = docs.length;
-                        final present = docs
-                            .where(
-                              (doc) =>
-                                  (doc.data()
-                                      as Map<String, dynamic>)['status'] ==
-                                  'Present',
-                            )
-                            .length;
-                        attendancePct = total > 0 ? (present / total) : 0.0;
-                        attendanceTrend = "Total $total sessions";
+                    stream: DatabaseService().getSubjects(classId),
+                    builder: (context, subjectsSnapshot) {
+                      final List<String> subjectFilters = ["All Subjects"];
+                      final Map<String, String> subjectIdToName = {};
+                      if (subjectsSnapshot.hasData) {
+                        for (var doc in subjectsSnapshot.data!.docs) {
+                          final name = doc['name'] as String;
+                          subjectFilters.add(name);
+                          subjectIdToName[doc.id] = name;
+                        }
                       }
 
                       return StreamBuilder<QuerySnapshot>(
-                        stream: DatabaseService().getStudentExamResults(
+                        stream: DatabaseService().getStudentAttendanceHistory(
                           studentId,
                         ),
-                        builder: (context, examsSnapshot) {
-                          if (examsSnapshot.hasError) {
+                        builder: (context, attendanceSnapshot) {
+                          if (attendanceSnapshot.hasError) {
                             return Center(
                               child: Text(
-                                "Error loading exams: ${examsSnapshot.error}",
+                                "Error loading attendance: ${attendanceSnapshot.error}",
                                 style: GoogleFonts.lexend(color: Colors.red),
                               ),
                             );
                           }
 
-                          // Calculate Exam Stats
-                          double totalPercentage = 0.0;
-                          int examCount = 0;
-
-                          if (examsSnapshot.hasData &&
-                              examsSnapshot.data!.docs.isNotEmpty) {
-                            for (var doc in examsSnapshot.data!.docs) {
-                              final data = doc.data() as Map<String, dynamic>;
-                              final marks =
-                                  (data['marksObtained'] as num?)?.toDouble() ??
-                                  0.0;
-                              final total =
-                                  (data['totalMarks'] as num?)?.toDouble() ??
-                                  100.0; // Default 100 if missing
-                              if (total > 0) {
-                                totalPercentage += (marks / total);
-                                examCount++;
-                              }
-                            }
-                          }
-
-                          // GPA Calculation (Simple: Avg % * 4)
-                          double gpa = examCount > 0
-                              ? (totalPercentage / examCount) * 4.0
-                              : 0.0;
-                          String gpaString = gpa.toStringAsFixed(2);
-
-                          return SingleChildScrollView(
-                            padding: const EdgeInsets.only(bottom: 110),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                _buildHeader(
-                                  isDarkMode,
-                                  textColor,
-                                  subTextColor,
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 24,
-                                  ),
-                                  child: Column(
-                                    children: [
-                                      const SizedBox(height: 16),
-                                      _buildQuickStats(
-                                        attendancePct,
-                                        attendanceTrend,
-                                        gpaString, // Pass real GPA
-                                        surfaceColor,
-                                        textColor,
-                                        subTextColor,
-                                        borderColor,
-                                      ),
-                                      const SizedBox(height: 24),
-                                      _buildSubjectFilter(
-                                        isDarkMode,
-                                        surfaceColor,
-                                        textColor,
-                                        subTextColor,
-                                        borderColor,
-                                      ),
-                                      const SizedBox(height: 24),
-                                      _buildPerformanceChart(
-                                        surfaceColor,
-                                        textColor,
-                                        subTextColor,
-                                        borderColor,
-                                      ),
-                                      const SizedBox(height: 24),
-                                      _buildProgressIndicators(
-                                        surfaceColor,
-                                        textColor,
-                                        subTextColor,
-                                        borderColor,
-                                      ),
-                                      const SizedBox(height: 24),
-                                      _buildAttendanceMarksChart(
-                                        surfaceColor,
-                                        textColor,
-                                        subTextColor,
-                                        borderColor,
-                                      ),
-                                      const SizedBox(height: 24),
-                                      _buildAchievementCard(),
-                                      const SizedBox(height: 24),
-                                    ],
-                                  ),
-                                ),
-                              ],
+                          return StreamBuilder<QuerySnapshot>(
+                            stream: DatabaseService().getStudentExamResults(
+                              studentId,
                             ),
+                            builder: (context, examsSnapshot) {
+                              if (examsSnapshot.hasError) {
+                                return Center(
+                                  child: Text(
+                                    "Error loading exams: ${examsSnapshot.error}",
+                                    style: GoogleFonts.lexend(
+                                      color: Colors.red,
+                                    ),
+                                  ),
+                                );
+                              }
+
+                              // 1. Calculate General Stats
+                              double attendancePct = 0.0;
+                              String attendanceTrend = "No Data";
+                              if (attendanceSnapshot.hasData &&
+                                  attendanceSnapshot.data!.docs.isNotEmpty) {
+                                final allDocs = attendanceSnapshot.data!.docs;
+                                final docs = _selectedFilter == "All Subjects"
+                                    ? allDocs
+                                    : allDocs
+                                          .where(
+                                            (doc) =>
+                                                (doc.data()
+                                                    as Map)['subjectName'] ==
+                                                _selectedFilter,
+                                          )
+                                          .toList();
+
+                                final total = docs.length;
+                                final present = docs
+                                    .where(
+                                      (doc) =>
+                                          (doc.data()
+                                              as Map<
+                                                String,
+                                                dynamic
+                                              >)['status'] ==
+                                          'Present',
+                                    )
+                                    .length;
+                                attendancePct = total > 0
+                                    ? (present / total)
+                                    : 0.0;
+                                attendanceTrend = "Total $total sessions";
+                              }
+
+                              double totalExamPct = 0.0;
+                              int examCount = 0;
+                              if (examsSnapshot.hasData &&
+                                  examsSnapshot.data!.docs.isNotEmpty) {
+                                final allExams = examsSnapshot.data!.docs;
+                                final exams = _selectedFilter == "All Subjects"
+                                    ? allExams
+                                    : allExams
+                                          .where(
+                                            (doc) =>
+                                                (doc.data()
+                                                    as Map)['subjectName'] ==
+                                                _selectedFilter,
+                                          )
+                                          .toList();
+
+                                for (var doc in exams) {
+                                  final data =
+                                      doc.data() as Map<String, dynamic>;
+                                  final marks =
+                                      (data['marksObtained'] as num?)
+                                          ?.toDouble() ??
+                                      0.0;
+                                  final total =
+                                      (data['totalMarks'] as num?)
+                                          ?.toDouble() ??
+                                      100.0;
+                                  if (total > 0) {
+                                    totalExamPct += (marks / total);
+                                    examCount++;
+                                  }
+                                }
+                              }
+                              double gpa = examCount > 0
+                                  ? (totalExamPct / examCount) * 4.0
+                                  : 0.0;
+                              String gpaString = gpa.toStringAsFixed(2);
+
+                              // 2. Calculate Subject Stats (Attendance vs Marks)
+                              final Map<String, Map<String, dynamic>>
+                              subjectBarStats = {};
+
+                              // Initialize with real subjects
+                              for (var name in subjectIdToName.values) {
+                                subjectBarStats[name] = {
+                                  'attPct': 0.0,
+                                  'markPct': 0.0,
+                                  'attCount': 0,
+                                  'markCount': 0,
+                                };
+                              }
+
+                              if (attendanceSnapshot.hasData) {
+                                for (var doc in attendanceSnapshot.data!.docs) {
+                                  final data =
+                                      doc.data() as Map<String, dynamic>;
+                                  final subName =
+                                      data['subjectName'] as String?;
+                                  if (subName != null &&
+                                      subjectBarStats.containsKey(subName)) {
+                                    if (data['status'] == 'Present') {
+                                      subjectBarStats[subName]!['attCount'] +=
+                                          1;
+                                    }
+                                  }
+                                }
+                              }
+
+                              if (examsSnapshot.hasData) {
+                                for (var doc in examsSnapshot.data!.docs) {
+                                  final data =
+                                      doc.data() as Map<String, dynamic>;
+                                  final subName =
+                                      data['subjectName'] as String?;
+                                  if (subName != null &&
+                                      subjectBarStats.containsKey(subName)) {
+                                    final m =
+                                        (data['marksObtained'] as num?)
+                                            ?.toDouble() ??
+                                        0;
+                                    final t =
+                                        (data['totalMarks'] as num?)
+                                            ?.toDouble() ??
+                                        100;
+                                    subjectBarStats[subName]!['markPct'] +=
+                                        (m / t);
+                                    subjectBarStats[subName]!['markCount'] += 1;
+                                  }
+                                }
+                              }
+
+                              // Finalize averages
+                              subjectBarStats.forEach((name, stats) {
+                                // Attendance average (simulated denominator if total sessions per subject unknown)
+                                // For demo, we'll use total attendance docs per subject if we can,
+                                // but since we only have flat attendance records, we'll assume a base of 5 for scaling
+                                int totalSubSessions =
+                                    attendanceSnapshot.data?.docs
+                                        .where(
+                                          (d) =>
+                                              (d.data()
+                                                  as Map)['subjectName'] ==
+                                              name,
+                                        )
+                                        .length ??
+                                    0;
+                                stats['attPct'] = totalSubSessions > 0
+                                    ? (stats['attCount'] / totalSubSessions)
+                                    : 0.0;
+                                stats['markPct'] = stats['markCount'] > 0
+                                    ? (stats['markPct'] / stats['markCount'])
+                                    : 0.0;
+                              });
+
+                              // 3. Performance Over Time (Real Trend)
+                              final List<double> trendPoints = [
+                                0.5,
+                                0.6,
+                                0.55,
+                                0.7,
+                                0.85,
+                              ]; // Default
+                              if (examsSnapshot.hasData &&
+                                  examsSnapshot.data!.docs.isNotEmpty) {
+                                // Filter exams for trend
+                                final allExams = examsSnapshot.data!.docs;
+                                final filteredExams =
+                                    _selectedFilter == "All Subjects"
+                                    ? allExams
+                                    : allExams
+                                          .where(
+                                            (doc) =>
+                                                (doc.data()
+                                                    as Map)['subjectName'] ==
+                                                _selectedFilter,
+                                          )
+                                          .toList();
+
+                                // Sort by date and take latest 5 average percentages
+                                final sortedExams = filteredExams
+                                  ..sort((a, b) {
+                                    final ta =
+                                        (a.data() as Map)['submittedAt']
+                                            as Timestamp?;
+                                    final tb =
+                                        (b.data() as Map)['submittedAt']
+                                            as Timestamp?;
+                                    return (ta?.millisecondsSinceEpoch ?? 0)
+                                        .compareTo(
+                                          tb?.millisecondsSinceEpoch ?? 0,
+                                        );
+                                  });
+
+                                if (sortedExams.isNotEmpty) {
+                                  trendPoints.clear();
+                                  for (var doc in sortedExams.take(5)) {
+                                    final d = doc.data() as Map;
+                                    final m =
+                                        (d['marksObtained'] as num?)
+                                            ?.toDouble() ??
+                                        0;
+                                    final t =
+                                        (d['totalMarks'] as num?)?.toDouble() ??
+                                        100;
+                                    trendPoints.add(m / t);
+                                  }
+                                  while (trendPoints.length < 2)
+                                    trendPoints.insert(0, 0.5); // Padding
+                                }
+                              }
+
+                              return SingleChildScrollView(
+                                padding: const EdgeInsets.only(bottom: 110),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _buildHeader(
+                                      isDarkMode,
+                                      textColor,
+                                      subTextColor,
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 24,
+                                      ),
+                                      child: Column(
+                                        children: [
+                                          const SizedBox(height: 16),
+                                          _buildQuickStats(
+                                            attendancePct,
+                                            attendanceTrend,
+                                            gpaString, // Pass real GPA
+                                            surfaceColor,
+                                            textColor,
+                                            subTextColor,
+                                            borderColor,
+                                          ),
+                                          const SizedBox(height: 24),
+                                          _buildSubjectFilter(
+                                            isDarkMode,
+                                            surfaceColor,
+                                            textColor,
+                                            subTextColor,
+                                            borderColor,
+                                            subjectFilters,
+                                          ),
+                                          const SizedBox(height: 24),
+                                          _buildPerformanceChart(
+                                            surfaceColor,
+                                            textColor,
+                                            subTextColor,
+                                            borderColor,
+                                            trendPoints,
+                                          ),
+                                          const SizedBox(height: 24),
+                                          _buildProgressIndicators(
+                                            surfaceColor,
+                                            textColor,
+                                            subTextColor,
+                                            borderColor,
+                                          ),
+                                          const SizedBox(height: 24),
+                                          _buildAttendanceMarksChart(
+                                            surfaceColor,
+                                            textColor,
+                                            subTextColor,
+                                            borderColor,
+                                            _selectedFilter == "All Subjects"
+                                                ? subjectBarStats
+                                                : {
+                                                    _selectedFilter:
+                                                        subjectBarStats[_selectedFilter] ??
+                                                        {
+                                                          'attPct': 0.0,
+                                                          'markPct': 0.0,
+                                                        },
+                                                  },
+                                          ),
+                                          const SizedBox(height: 24),
+                                          _buildAchievementCard(),
+                                          const SizedBox(height: 24),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
                           );
                         },
                       );
@@ -227,41 +417,43 @@ class _LearningAnalyticsScreenState extends State<LearningAnalyticsScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                "Learning Analytics",
-                style: GoogleFonts.lexend(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: textColor,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Learning Analytics",
+                  style: GoogleFonts.lexend(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: textColor,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 4),
-              Row(
-                children: [
-                  Container(
-                    width: 8,
-                    height: 8,
-                    decoration: const BoxDecoration(
-                      color: Colors.green,
-                      shape: BoxShape.circle,
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: const BoxDecoration(
+                        color: Colors.green,
+                        shape: BoxShape.circle,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    "LOCAL SYNC: 2M AGO",
-                    style: GoogleFonts.lexend(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      color: subTextColor,
-                      letterSpacing: 1.2,
+                    const SizedBox(width: 8),
+                    Text(
+                      "LOCAL SYNC: 2M AGO",
+                      style: GoogleFonts.lexend(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: subTextColor,
+                        letterSpacing: 1.2,
+                      ),
                     ),
-                  ),
-                ],
-              ),
-            ],
+                  ],
+                ),
+              ],
+            ),
           ),
           ProfileImage(
             imageUrl:
@@ -385,44 +577,49 @@ class _LearningAnalyticsScreenState extends State<LearningAnalyticsScreen> {
     Color textColor,
     Color subTextColor,
     Color borderColor,
+    List<String> filters,
   ) {
-    final List<String> filters = [
-      "All Subjects",
-      "Mathematics",
-      "Physics",
-      "Biology",
-    ];
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
         children: filters.map((filter) {
-          bool isSelected = filter == "All Subjects";
+          bool isSelected = filter == _selectedFilter;
           return Padding(
             padding: const EdgeInsets.only(right: 8),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              decoration: BoxDecoration(
-                color: isSelected ? primaryColor : surfaceColor,
-                borderRadius: BorderRadius.circular(30),
-                border: isSelected ? null : Border.all(color: borderColor),
-                boxShadow: isSelected
-                    ? [
-                        BoxShadow(
-                          color: primaryColor.withValues(alpha: 0.2),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ]
-                    : null,
-              ),
-              child: Text(
-                filter,
-                style: GoogleFonts.lexend(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  color: isSelected
-                      ? Colors.white
-                      : (isDarkMode ? subTextColor : Colors.grey.shade700),
+            child: GestureDetector(
+              onTap: () {
+                setState(() {
+                  _selectedFilter = filter;
+                });
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: isSelected ? primaryColor : surfaceColor,
+                  borderRadius: BorderRadius.circular(30),
+                  border: isSelected ? null : Border.all(color: borderColor),
+                  boxShadow: isSelected
+                      ? [
+                          BoxShadow(
+                            color: primaryColor.withValues(alpha: 0.2),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ]
+                      : null,
+                ),
+                child: Text(
+                  filter,
+                  style: GoogleFonts.lexend(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: isSelected
+                        ? Colors.white
+                        : (isDarkMode ? subTextColor : Colors.grey.shade700),
+                  ),
                 ),
               ),
             ),
@@ -437,6 +634,7 @@ class _LearningAnalyticsScreenState extends State<LearningAnalyticsScreen> {
     Color textColor,
     Color subTextColor,
     Color borderColor,
+    List<double> points,
   ) {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -477,6 +675,7 @@ class _LearningAnalyticsScreenState extends State<LearningAnalyticsScreen> {
               painter: PerformanceLinePainter(
                 primaryColor: primaryColor,
                 isDarkMode: Theme.of(context).brightness == Brightness.dark,
+                points: points,
               ),
             ),
           ),
@@ -611,6 +810,7 @@ class _LearningAnalyticsScreenState extends State<LearningAnalyticsScreen> {
     Color textColor,
     Color subTextColor,
     Color borderColor,
+    Map<String, Map<String, dynamic>> stats,
   ) {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -656,11 +856,17 @@ class _LearningAnalyticsScreenState extends State<LearningAnalyticsScreen> {
             ],
           ),
           const SizedBox(height: 24),
-          _buildSubjectBar("Mathematics", 0.85, 0.10, subTextColor),
-          const SizedBox(height: 16),
-          _buildSubjectBar("Physics", 0.72, 0.25, subTextColor),
-          const SizedBox(height: 16),
-          _buildSubjectBar("Literature", 0.94, 0.04, subTextColor),
+          ...stats.entries.map(
+            (e) => Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: _buildSubjectBar(
+                e.key,
+                e.value['markPct'],
+                e.value['attPct'],
+                subTextColor,
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -799,10 +1005,12 @@ class _LearningAnalyticsScreenState extends State<LearningAnalyticsScreen> {
 class PerformanceLinePainter extends CustomPainter {
   final Color primaryColor;
   final bool isDarkMode;
+  final List<double> points;
 
   PerformanceLinePainter({
     required this.primaryColor,
     required this.isDarkMode,
+    required this.points,
   });
 
   @override
@@ -826,23 +1034,26 @@ class PerformanceLinePainter extends CustomPainter {
       ..strokeCap = StrokeCap.round;
 
     final Path path = Path();
-    final List<Offset> points = [
-      Offset(0, size.height * 0.7),
-      Offset(size.width * 0.25, size.height * 0.5),
-      Offset(size.width * 0.5, size.height * 0.45),
-      Offset(size.width * 0.75, size.height * 0.3),
-      Offset(size.width, size.height * 0.15),
-    ];
+    final List<Offset> pointsList = [];
+    final double stepX = size.width / (points.length - 1);
+    for (int i = 0; i < points.length; i++) {
+      pointsList.add(Offset(i * stepX, size.height * (1 - points[i])));
+    }
 
-    path.moveTo(points[0].dx, points[0].dy);
-    for (int i = 1; i < points.length; i++) {
+    path.moveTo(pointsList[0].dx, pointsList[0].dy);
+    for (int i = 1; i < pointsList.length; i++) {
       // Use cubic curves for smooth line like SVG
-      double xc = (points[i - 1].dx + points[i].dx) / 2;
-      double yc = (points[i - 1].dy + points[i].dy) / 2;
-      path.quadraticBezierTo(points[i - 1].dx, points[i - 1].dy, xc, yc);
+      double xc = (pointsList[i - 1].dx + pointsList[i].dx) / 2;
+      double yc = (pointsList[i - 1].dy + pointsList[i].dy) / 2;
+      path.quadraticBezierTo(
+        pointsList[i - 1].dx,
+        pointsList[i - 1].dy,
+        xc,
+        yc,
+      );
     }
     // Final point
-    path.lineTo(points.last.dx, points.last.dy);
+    path.lineTo(pointsList.last.dx, pointsList.last.dy);
 
     canvas.drawPath(path, linePaint);
 
@@ -874,11 +1085,15 @@ class PerformanceLinePainter extends CustomPainter {
       ..strokeWidth = 1.5
       ..style = PaintingStyle.stroke;
 
-    for (int i = 1; i < points.length; i++) {
-      canvas.drawCircle(points[i], i == points.length - 1 ? 4 : 3, pointPaint);
+    for (int i = 1; i < pointsList.length; i++) {
       canvas.drawCircle(
-        points[i],
-        i == points.length - 1 ? 4 : 3,
+        pointsList[i],
+        i == pointsList.length - 1 ? 4 : 3,
+        pointPaint,
+      );
+      canvas.drawCircle(
+        pointsList[i],
+        i == pointsList.length - 1 ? 4 : 3,
         pointBorderPaint,
       );
     }

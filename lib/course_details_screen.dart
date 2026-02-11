@@ -425,7 +425,9 @@ class _CourseDetailsScreenState extends State<CourseDetailsScreen> {
               decoration: BoxDecoration(
                 color: isCompleted
                     ? successColor.withValues(alpha: 0.1)
-                    : (isCurrent ? primaryColor : Colors.grey.withValues(alpha: 0.1)),
+                    : (isCurrent
+                          ? primaryColor
+                          : Colors.grey.withValues(alpha: 0.1)),
                 shape: BoxShape.circle,
               ),
               child: Icon(
@@ -464,16 +466,28 @@ class _CourseDetailsScreenState extends State<CourseDetailsScreen> {
                 ],
               ),
             ),
-            Icon(
-              isCompleted
-                  ? Icons.cloud_done
-                  : (isCurrent
-                        ? Icons.downloading
-                        : Icons.file_download_outlined),
-              size: 20,
-              color: isCompleted
-                  ? successColor
-                  : (isCurrent ? primaryColor : Colors.grey),
+            GestureDetector(
+              onTap: isCompleted
+                  ? null
+                  : () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text("Downloading $title..."),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    },
+              child: Icon(
+                isCompleted
+                    ? Icons.cloud_done
+                    : (isCurrent
+                          ? Icons.downloading
+                          : Icons.file_download_outlined),
+                size: 20,
+                color: isCompleted
+                    ? successColor
+                    : (isCurrent ? primaryColor : Colors.grey),
+              ),
             ),
           ],
         ),
@@ -560,10 +574,20 @@ class _CourseDetailsScreenState extends State<CourseDetailsScreen> {
               ],
             ),
           ),
-          const Icon(
-            Icons.file_download_outlined,
-            size: 20,
-            color: Colors.grey,
+          GestureDetector(
+            onTap: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text("Downloading $title..."),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            },
+            child: const Icon(
+              Icons.file_download_outlined,
+              size: 20,
+              color: Colors.grey,
+            ),
           ),
         ],
       ),
@@ -702,7 +726,15 @@ class _CourseDetailsScreenState extends State<CourseDetailsScreen> {
           ),
         ),
         child: ElevatedButton(
-          onPressed: () {},
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) =>
+                    const LessonPreviewScreen(title: "Linear Equations Part 1"),
+              ),
+            );
+          },
           style: ElevatedButton.styleFrom(
             backgroundColor: primaryColor,
             foregroundColor: Colors.white,

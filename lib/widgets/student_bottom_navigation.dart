@@ -160,12 +160,12 @@ class StudentBottomNavigation extends StatelessWidget {
               context,
               MaterialPageRoute(
                 builder: (context) => StudentProfileScreen(
+                  uid: currentUid,
                   studentData: {
                     'name': userData['fullName'] ?? 'Student',
                     'image': userData['imageUrl'] ?? '',
                     'details':
                         'Class ${userData['className'] ?? ''}-${userData['section'] ?? ''}',
-                    // Add other fields as expected by StudentProfileScreen
                   },
                 ),
               ),

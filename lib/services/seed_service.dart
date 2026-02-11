@@ -14,6 +14,8 @@ class SeedService {
       await _clearCollection('attendance');
       await _clearCollection('attendance_sessions');
       await _clearCollection('exams');
+      await _clearCollection('exam_submissions');
+      await _clearCollection('notifications');
 
       WriteBatch batch = _db.batch();
 
@@ -271,7 +273,8 @@ class SeedService {
           // Submissions for first class
           for (int studentIdx = 0; studentIdx < 5; studentIdx++) {
             String sid = allStudentIds[studentIdx];
-            batch.set(examRef.collection('submissions').doc(sid), {
+            batch.set(_db.collection('exam_submissions').doc(), {
+              'examId': examRef.id,
               'studentId': sid,
               'studentName':
                   '${firstNames[studentIdx % firstNames.length]} ${lastNames[studentIdx % lastNames.length]}',
@@ -286,6 +289,37 @@ class SeedService {
           batch = _db.batch();
         }
       }
+
+      // --- 8. NOTIFICATIONS ---
+      List<Map<String, dynamic>> mockNotifications = [
+        {
+          'title': 'New Exam Scheduled',
+          'body': 'Mathematics Quiz 3 has been scheduled for Feb 15th.',
+          'type': 'exam',
+          'isRead': false,
+        },
+        {
+          'title': 'Attendance Alert',
+          'body': 'You were marked absent for Physics on Feb 10th.',
+          'type': 'attendance',
+          'isRead': true,
+        },
+        {
+          'title': 'Holiday Announcement',
+          'body': 'School will remain closed on Feb 19th for Shiv Jayanti.',
+          'type': 'announcement',
+          'isRead': false,
+        },
+      ];
+
+      for (var n in mockNotifications) {
+        batch.set(_db.collection('notifications').doc(), {
+          ...n,
+          'userId': 'student_123',
+          'timestamp': FieldValue.serverTimestamp(),
+        });
+      }
+      await batch.commit();
 
       if (kDebugMode) print('Database Seeded Successfully with Real Data!');
     } catch (e) {

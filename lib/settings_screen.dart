@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+
 import 'services/database_service.dart';
 import 'services/auth_service.dart';
 import 'services/theme_service.dart';
@@ -9,7 +9,8 @@ import 'login_screen.dart';
 import 'widgets/profile_image.dart';
 
 class SettingsScreen extends StatelessWidget {
-  const SettingsScreen({super.key});
+  final String uid;
+  const SettingsScreen({super.key, required this.uid});
 
   Future<void> _handleLogout(BuildContext context) async {
     await AuthService().logout();
@@ -35,7 +36,6 @@ class SettingsScreen extends StatelessWidget {
     final Color subTextColor = isDarkMode
         ? const Color(0xff94a3b8)
         : const Color(0xff64748b);
-    final String uid = FirebaseAuth.instance.currentUser?.uid ?? '';
 
     return Scaffold(
       backgroundColor: bgColor,
@@ -335,7 +335,7 @@ class SettingsScreen extends StatelessWidget {
       trailing: Switch.adaptive(
         value: value,
         onChanged: onChanged,
-        activeColor: const Color(0xff0f68e6),
+        activeTrackColor: const Color(0xff0f68e6),
       ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
     );

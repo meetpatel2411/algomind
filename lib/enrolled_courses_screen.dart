@@ -23,6 +23,14 @@ class _EnrolledCoursesScreenState extends State<EnrolledCoursesScreen> {
   final Color secondaryGreen = const Color(0xff10b981);
   final Color backgroundLight = const Color(0xfff6f7f8);
   final Color backgroundDark = const Color(0xff101722);
+  String _searchQuery = "";
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -44,6 +52,7 @@ class _EnrolledCoursesScreenState extends State<EnrolledCoursesScreen> {
       body: ConnectivityIndicator(
         child: SafeArea(
           child: Stack(
+            fit: StackFit.expand,
             children: [
               Column(
                 children: [
@@ -95,7 +104,20 @@ class _EnrolledCoursesScreenState extends State<EnrolledCoursesScreen> {
                               );
                             }
 
-                            final subjects = snapshot.data!.docs;
+                            final allSubjects = snapshot.data!.docs;
+                            final subjects = _searchQuery.isEmpty
+                                ? allSubjects
+                                : allSubjects.where((doc) {
+                                    final name =
+                                        (doc.data()
+                                                as Map<String, dynamic>)['name']
+                                            ?.toString()
+                                            .toLowerCase() ??
+                                        "";
+                                    return name.contains(
+                                      _searchQuery.toLowerCase(),
+                                    );
+                                  }).toList();
 
                             if (subjects.isEmpty) {
                               return Center(
@@ -255,6 +277,12 @@ class _EnrolledCoursesScreenState extends State<EnrolledCoursesScreen> {
           ),
           const SizedBox(height: 16),
           TextField(
+            controller: _searchController,
+            onChanged: (value) {
+              setState(() {
+                _searchQuery = value;
+              });
+            },
             decoration: InputDecoration(
               hintText: 'Search your courses...',
               hintStyle: GoogleFonts.lexend(
@@ -265,6 +293,17 @@ class _EnrolledCoursesScreenState extends State<EnrolledCoursesScreen> {
                 Icons.search_rounded,
                 color: isDarkMode ? Colors.white30 : Colors.black38,
               ),
+              suffixIcon: _searchQuery.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear_rounded, size: 20),
+                      onPressed: () {
+                        _searchController.clear();
+                        setState(() {
+                          _searchQuery = "";
+                        });
+                      },
+                    )
+                  : null,
               filled: true,
               fillColor: isDarkMode
                   ? Colors.white.withValues(alpha: 0.05)

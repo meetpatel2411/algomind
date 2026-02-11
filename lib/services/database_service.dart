@@ -14,6 +14,9 @@ class DatabaseService {
       _db.collection('attendance_sessions');
   CollectionReference get attendance =>
       _db.collection('attendance'); // New flat table
+  CollectionReference get examSubmissions =>
+      _db.collection('exam_submissions'); // New flat table for analytics
+  CollectionReference get notifications => _db.collection('notifications');
 
   // --- USER METHODS ---
 
@@ -282,7 +285,7 @@ class DatabaseService {
 
   // Get results for a specific exam (Teacher View)
   Stream<QuerySnapshot> getExamResults(String examId) {
-    return exams.doc(examId).collection('submissions').snapshots();
+    return examSubmissions.where('examId', isEqualTo: examId).snapshots();
   }
 
   // Get all exam results for a student (Analytics)
@@ -292,8 +295,7 @@ class DatabaseService {
   // or 'users/{uid}/results'.
   // For now, let's use a Collection Group query which is powerful.
   Stream<QuerySnapshot> getStudentExamResults(String studentId) {
-    return _db
-        .collectionGroup('submissions')
+    return examSubmissions
         .where('studentId', isEqualTo: studentId)
         // .orderBy('submittedAt', descending: true)
         .snapshots();
@@ -305,15 +307,14 @@ class DatabaseService {
   ) async {
     WriteBatch batch = _db.batch();
 
-    // Calculate total class average stats if needed, but for now just save individual results
-
     for (var result in results) {
-      DocumentReference ref = exams
-          .doc(examId)
-          .collection('submissions')
-          .doc(result['studentId']); // Use studentId as doc ID for easy lookup
+      DocumentReference ref = examSubmissions.doc(); // Use top-level collection
 
-      batch.set(ref, {...result, 'submittedAt': FieldValue.serverTimestamp()});
+      batch.set(ref, {
+        ...result,
+        'examId': examId, // Explicitly link to exam
+        'submittedAt': FieldValue.serverTimestamp(),
+      });
     }
 
     await batch.commit();
@@ -452,5 +453,14 @@ class DatabaseService {
       if (kDebugMode) print('Error getting class: $e');
       rethrow;
     }
+  }
+
+  // --- NOTIFICATION METHODS ---
+
+  Stream<QuerySnapshot> getNotifications(String userId) {
+    return notifications
+        .where('userId', isEqualTo: userId)
+        // .orderBy('timestamp', descending: true) // To avoid index requirement
+        .snapshots();
   }
 }

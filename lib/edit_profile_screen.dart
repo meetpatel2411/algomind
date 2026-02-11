@@ -6,8 +6,9 @@ import 'widgets/profile_image.dart';
 
 class EditProfileScreen extends StatefulWidget {
   final Map<String, dynamic> userData;
+  final String? uid;
 
-  const EditProfileScreen({super.key, required this.userData});
+  const EditProfileScreen({super.key, required this.userData, this.uid});
 
   @override
   State<EditProfileScreen> createState() => _EditProfileScreenState();
@@ -43,7 +44,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
       try {
-        final uid = FirebaseAuth.instance.currentUser?.uid;
+        final uid = widget.uid ?? FirebaseAuth.instance.currentUser?.uid;
         if (uid != null) {
           await _db.updateUserProfile(uid, {
             'fullName': _nameController.text.trim(),

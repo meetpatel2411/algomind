@@ -463,4 +463,14 @@ class DatabaseService {
         // .orderBy('timestamp', descending: true) // To avoid index requirement
         .snapshots();
   }
+
+  Stream<QuerySnapshot> getExamsForTeacher(String teacherId) {
+    return exams
+        .where(
+          'teacherId',
+          isEqualTo: teacherId,
+        ) // Changed createdBy to teacherId to match schema
+        // .orderBy('date', descending: true)
+        .snapshots();
+  }
 }

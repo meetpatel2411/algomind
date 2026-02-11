@@ -3,7 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'services/database_service.dart';
-import 'settings_screen.dart'; // Added import for SettingsScreen
+import 'settings_screen.dart';
+import 'teacher_profile_screen.dart'; // Added import
 
 import 'widgets/teacher_bottom_navigation.dart';
 import 'manage_students_screen.dart';
@@ -458,35 +459,47 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
                   ),
                 ],
               ),
-              Stack(
-                children: [
-                  ProfileImage(
-                    imageUrl: imageUrl,
-                    size: 48,
-                    borderColor: primaryColor.withValues(alpha: 0.2),
-                    borderWidth: 2,
-                  ),
-                  Positioned(
-                    bottom: -2,
-                    right: -2,
-                    child: Container(
-                      padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(
-                        color: primaryColor,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: isDarkMode ? backgroundDark : backgroundLight,
-                          width: 2,
+              GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => TeacherProfileScreen(uid: uid),
+                    ),
+                  );
+                },
+                child: Stack(
+                  children: [
+                    ProfileImage(
+                      imageUrl: imageUrl,
+                      size: 48,
+                      borderColor: primaryColor.withValues(alpha: 0.2),
+                      borderWidth: 2,
+                    ),
+                    Positioned(
+                      bottom: -2,
+                      right: -2,
+                      child: Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: BoxDecoration(
+                          color: primaryColor,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: isDarkMode
+                                ? backgroundDark
+                                : backgroundLight,
+                            width: 2,
+                          ),
+                        ),
+                        child: const Icon(
+                          Icons.edit_rounded,
+                          size: 10,
+                          color: Colors.white,
                         ),
                       ),
-                      child: const Icon(
-                        Icons.edit_rounded,
-                        size: 10,
-                        color: Colors.white,
-                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ],
           );
